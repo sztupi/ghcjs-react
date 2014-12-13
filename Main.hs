@@ -16,9 +16,9 @@ main = postGUIAsync $ do
   runReact $ do
     let comp = component $ do
           putStrLn "Rendering the thing"
-          return $ elem_ div_ props [str_ "Hello, World~"]
+          return $ createElement div_ props [str_ "Hello, World~"]
     hello <- createClass (comp { componentDisplayName = Just "Hello" })
-    renderOn (castToElement b) $ elem_ div_ props
+    renderOn (castToElement b) $ createElement div_ props
       [ str_ "Wibble"
       , elem_ div_ props [str_ "Wobble"]
       , elem_ hello props []

@@ -57,7 +57,7 @@ createClass' c = do
   cf <- S.liftBase $ jsCreateClass o
   return (S.release k, cf)
 
-foreign import javascript unsafe "(function () { args = [$1, $2].concat($3); console.log(args); return React.createElement.apply(null, args); } )()"
+foreign import javascript unsafe "React.createElement.apply(null, [$1, $2].concat($3))"
   jsCreateElement :: JSRef a -> JSRef b -> JSArray c -> ReactElement
 
 type ReactNode = Either Text ReactElement
