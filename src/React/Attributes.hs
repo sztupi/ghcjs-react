@@ -2,10 +2,21 @@
 {-# LANGUAGE OverloadedStrings #-}
 module React.Attributes where
 import Control.Lens
-import Data.Text (Text)
+import Control.Monad
+import Data.Text (Text, singleton)
 import Data.HashMap.Strict (HashMap)
 
-type Prop a = Lens' (HashMap Text Text) (Maybe a)
+type Prop' a = Lens' (HashMap Text Text) a
+type Prop a = Prop' (Maybe a)
+
+present :: Lens' (Maybe Text) Bool
+present = lens getter setter
+  where
+    getter Nothing = False
+    getter (Just _) = True
+
+    setter _ False = Nothing
+    setter _ True = Just ""
 
 {-
 data AcceptAttribute = Extension
@@ -16,20 +27,34 @@ data AcceptAttribute = Extension
 
 accept :: [AcceptAttribute] -> Prop
 
+-}
+
 -- TODO: make it better than just Text
 acceptCharset :: Prop Text
+acceptCharset = at "acceptCharset"
 
 accessKey :: Prop Char
+accessKey = at "accessKey" . lens getter setter
+  where
+    getter t = join $ fmap (fmap fst . uncons) t
+    setter _ = fmap singleton
 
 action :: Prop Text
+action = at "action"
 
-allowFullScreen :: Prop Bool
+allowFullScreen :: Prop' Bool
+allowFullScreen = at "allowFullScreen" . present
 
-allowTransparency :: Prop Bool
+allowTransparency :: Prop' Bool
+allowTransparency = at "allowTransparency" . present
 
 alt :: Prop Text
+alt = at "alt"
 
-async :: Prop Bool
+async :: Prop' Bool
+async = at "async" . present
+
+{-
 
 -- "on" | "off"
 autoComplete :: Prop Bool
@@ -82,9 +107,12 @@ defer :: Prop Bool
 data TextDirection = RightToLeft | LeftToRight | Auto
 
 dir :: Prop TextDirection
+-}
 
-disabled :: Prop Bool
+disabled :: Prop' Bool
+disabled = at "disabled" . present
 
+{-
 download :: Prop Bool
 
 draggable :: Prop Bool
@@ -179,9 +207,12 @@ rel = at "rel"
 
 {-
 required :: Prop Bool
+-}
 
 role :: Prop Text
+role = at "role"
 
+{-
 rows :: Prop Int
 
 rowSpan :: Prop Int
@@ -252,9 +283,10 @@ itemProp :: Prop Text
 itemScope :: Prop Text
 
 itemType :: Prop Text
+-}
 
 dangerouslySetInnerHTML :: Prop Text
--}
+dangerouslySetInnerHTML = at "dangerouslySetInnerHTML"
 
 {-
 cx
@@ -301,5 +333,7 @@ y1
 y2
 y
 aria
-prop
 -}
+
+prop :: Text -> Prop Text
+prop = at

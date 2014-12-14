@@ -7,13 +7,13 @@ import Data.Text (Text)
 class DOM a where
   dom :: Text -> a
 
-instance DOM (Props -> [ReactNode] -> Either Text ReactElement) where
+instance DOM (Maybe Props -> [ReactNode] -> Either Text ReactElement) where
   dom = elem_
 
 instance DOM Text where
   dom = id
 
-instance DOM (Props -> [ReactNode] -> ReactElement) where
+instance DOM (Maybe Props -> [ReactNode] -> ReactElement) where
   dom = createElement
 
 a_ :: DOM a => a
