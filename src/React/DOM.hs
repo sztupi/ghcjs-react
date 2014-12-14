@@ -1,404 +1,393 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module React.DOM where
 import React
 import Data.Text (Text)
 
-class DOM a where
-  dom :: Text -> a
+a_ :: Element
+a_ = createElement ("a" :: Text)
 
-instance DOM (Maybe Props -> [ReactNode] -> Either Text ReactElement) where
-  dom = elem_
+abbr_ :: Element
+abbr_ = createElement ("abbr" :: Text)
 
-instance DOM Text where
-  dom = id
+address_ :: Element
+address_ = createElement ("address" :: Text)
 
-instance DOM (Maybe Props -> [ReactNode] -> ReactElement) where
-  dom = createElement
+area_ :: Element
+area_ = createElement ("area" :: Text)
 
-a_ :: DOM a => a
-a_ = dom ("a" :: Text)
+article_ :: Element
+article_ = createElement ("article" :: Text)
 
-abbr_ :: DOM a => a
-abbr_ = dom ("abbr" :: Text)
+aside_ :: Element
+aside_ = createElement ("aside" :: Text)
 
-address_ :: DOM a => a
-address_ = dom ("address" :: Text)
+audio_ :: Element
+audio_ = createElement ("audio" :: Text)
 
-area_ :: DOM a => a
-area_ = dom ("area" :: Text)
+b_ :: Element
+b_ = createElement ("b" :: Text)
 
-article_ :: DOM a => a
-article_ = dom ("article" :: Text)
+base_ :: Element
+base_ = createElement ("base" :: Text)
 
-aside_ :: DOM a => a
-aside_ = dom ("aside" :: Text)
+bdi_ :: Element
+bdi_ = createElement ("bdi" :: Text)
 
-audio_ :: DOM a => a
-audio_ = dom ("audio" :: Text)
+bdo_ :: Element
+bdo_ = createElement ("bdo" :: Text)
 
-b_ :: DOM a => a
-b_ = dom ("b" :: Text)
+big_ :: Element
+big_ = createElement ("big" :: Text)
 
-base_ :: DOM a => a
-base_ = dom ("base" :: Text)
+blockquote_ :: Element
+blockquote_ = createElement ("blockquote" :: Text)
 
-bdi_ :: DOM a => a
-bdi_ = dom ("bdi" :: Text)
+body_ :: Element
+body_ = createElement ("body" :: Text)
 
-bdo_ :: DOM a => a
-bdo_ = dom ("bdo" :: Text)
+br_ :: Element
+br_ = createElement ("br" :: Text)
 
-big_ :: DOM a => a
-big_ = dom ("big" :: Text)
+button_ :: Element
+button_ = createElement ("button" :: Text)
 
-blockquote_ :: DOM a => a
-blockquote_ = dom ("blockquote" :: Text)
+canvas_ :: Element
+canvas_ = createElement ("canvas" :: Text)
 
-body_ :: DOM a => a
-body_ = dom ("body" :: Text)
+caption_ :: Element
+caption_ = createElement ("caption" :: Text)
 
-br_ :: DOM a => a
-br_ = dom ("br" :: Text)
+cite_ :: Element
+cite_ = createElement ("cite" :: Text)
 
-button_ :: DOM a => a
-button_ = dom ("button" :: Text)
+code_ :: Element
+code_ = createElement ("code" :: Text)
 
-canvas_ :: DOM a => a
-canvas_ = dom ("canvas" :: Text)
+col_ :: Element
+col_ = createElement ("col" :: Text)
 
-caption_ :: DOM a => a
-caption_ = dom ("caption" :: Text)
+colgroup_ :: Element
+colgroup_ = createElement ("colgroup" :: Text)
 
-cite_ :: DOM a => a
-cite_ = dom ("cite" :: Text)
+data_ :: Element
+data_ = createElement ("data" :: Text)
 
-code_ :: DOM a => a
-code_ = dom ("code" :: Text)
+datalist_ :: Element
+datalist_ = createElement ("datalist" :: Text)
 
-col_ :: DOM a => a
-col_ = dom ("col" :: Text)
+dd_ :: Element
+dd_ = createElement ("dd" :: Text)
 
-colgroup_ :: DOM a => a
-colgroup_ = dom ("colgroup" :: Text)
+del_ :: Element
+del_ = createElement ("del" :: Text)
 
-data_ :: DOM a => a
-data_ = dom ("data" :: Text)
+details_ :: Element
+details_ = createElement ("details" :: Text)
 
-datalist_ :: DOM a => a
-datalist_ = dom ("datalist" :: Text)
+dfn_ :: Element
+dfn_ = createElement ("dfn" :: Text)
 
-dd_ :: DOM a => a
-dd_ = dom ("dd" :: Text)
+dialog_ :: Element
+dialog_ = createElement ("dialog" :: Text)
 
-del_ :: DOM a => a
-del_ = dom ("del" :: Text)
+div_ :: Element
+div_ = createElement ("div" :: Text)
 
-details_ :: DOM a => a
-details_ = dom ("details" :: Text)
+dl_ :: Element
+dl_ = createElement ("dl" :: Text)
 
-dfn_ :: DOM a => a
-dfn_ = dom ("dfn" :: Text)
+dt_ :: Element
+dt_ = createElement ("dt" :: Text)
 
-dialog_ :: DOM a => a
-dialog_ = dom ("dialog" :: Text)
+em_ :: Element
+em_ = createElement ("em" :: Text)
 
-div_ :: DOM a => a
-div_ = dom ("div" :: Text)
+embed_ :: Element
+embed_ = createElement ("embed" :: Text)
 
-dl_ :: DOM a => a
-dl_ = dom ("dl" :: Text)
+fieldset_ :: Element
+fieldset_ = createElement ("fieldset" :: Text)
 
-dt_ :: DOM a => a
-dt_ = dom ("dt" :: Text)
+figcaption_ :: Element
+figcaption_ = createElement ("figcaption" :: Text)
 
-em_ :: DOM a => a
-em_ = dom ("em" :: Text)
+figure_ :: Element
+figure_ = createElement ("figure" :: Text)
 
-embed_ :: DOM a => a
-embed_ = dom ("embed" :: Text)
+footer_ :: Element
+footer_ = createElement ("footer" :: Text)
 
-fieldset_ :: DOM a => a
-fieldset_ = dom ("fieldset" :: Text)
+form_ :: Element
+form_ = createElement ("form" :: Text)
 
-figcaption_ :: DOM a => a
-figcaption_ = dom ("figcaption" :: Text)
+h1_ :: Element
+h1_ = createElement ("h1" :: Text)
 
-figure_ :: DOM a => a
-figure_ = dom ("figure" :: Text)
+h2_ :: Element
+h2_ = createElement ("h2" :: Text)
 
-footer_ :: DOM a => a
-footer_ = dom ("footer" :: Text)
+h3_ :: Element
+h3_ = createElement ("h3" :: Text)
 
-form_ :: DOM a => a
-form_ = dom ("form" :: Text)
+h4_ :: Element
+h4_ = createElement ("h4" :: Text)
 
-h1_ :: DOM a => a
-h1_ = dom ("h1" :: Text)
+h5_ :: Element
+h5_ = createElement ("h5" :: Text)
 
-h2_ :: DOM a => a
-h2_ = dom ("h2" :: Text)
+h6_ :: Element
+h6_ = createElement ("h6" :: Text)
 
-h3_ :: DOM a => a
-h3_ = dom ("h3" :: Text)
+head_ :: Element
+head_ = createElement ("head" :: Text)
 
-h4_ :: DOM a => a
-h4_ = dom ("h4" :: Text)
+header_ :: Element
+header_ = createElement ("header" :: Text)
 
-h5_ :: DOM a => a
-h5_ = dom ("h5" :: Text)
+hr_ :: Element
+hr_ = createElement ("hr" :: Text)
 
-h6_ :: DOM a => a
-h6_ = dom ("h6" :: Text)
+html_ :: Element
+html_ = createElement ("html" :: Text)
 
-head_ :: DOM a => a
-head_ = dom ("head" :: Text)
+i_ :: Element
+i_ = createElement ("i" :: Text)
 
-header_ :: DOM a => a
-header_ = dom ("header" :: Text)
+iframe_ :: Element
+iframe_ = createElement ("iframe" :: Text)
 
-hr_ :: DOM a => a
-hr_ = dom ("hr" :: Text)
+img_ :: Element
+img_ = createElement ("img" :: Text)
 
-html_ :: DOM a => a
-html_ = dom ("html" :: Text)
+input_ :: Element
+input_ = createElement ("input" :: Text)
 
-i_ :: DOM a => a
-i_ = dom ("i" :: Text)
+ins_ :: Element
+ins_ = createElement ("ins" :: Text)
 
-iframe_ :: DOM a => a
-iframe_ = dom ("iframe" :: Text)
+kbd_ :: Element
+kbd_ = createElement ("kbd" :: Text)
 
-img_ :: DOM a => a
-img_ = dom ("img" :: Text)
+keygen_ :: Element
+keygen_ = createElement ("keygen" :: Text)
 
-input_ :: DOM a => a
-input_ = dom ("input" :: Text)
+label_ :: Element
+label_ = createElement ("label" :: Text)
 
-ins_ :: DOM a => a
-ins_ = dom ("ins" :: Text)
+legend_ :: Element
+legend_ = createElement ("legend" :: Text)
 
-kbd_ :: DOM a => a
-kbd_ = dom ("kbd" :: Text)
+li_ :: Element
+li_ = createElement ("li" :: Text)
 
-keygen_ :: DOM a => a
-keygen_ = dom ("keygen" :: Text)
+link_ :: Element
+link_ = createElement ("link" :: Text)
 
-label_ :: DOM a => a
-label_ = dom ("label" :: Text)
+main_ :: Element
+main_ = createElement ("main" :: Text)
 
-legend_ :: DOM a => a
-legend_ = dom ("legend" :: Text)
+map_ :: Element
+map_ = createElement ("map" :: Text)
 
-li_ :: DOM a => a
-li_ = dom ("li" :: Text)
+mark_ :: Element
+mark_ = createElement ("mark" :: Text)
 
-link_ :: DOM a => a
-link_ = dom ("link" :: Text)
+menu_ :: Element
+menu_ = createElement ("menu" :: Text)
 
-main_ :: DOM a => a
-main_ = dom ("main" :: Text)
+menuitem_ :: Element
+menuitem_ = createElement ("menuitem" :: Text)
 
-map_ :: DOM a => a
-map_ = dom ("map" :: Text)
+meta_ :: Element
+meta_ = createElement ("meta" :: Text)
 
-mark_ :: DOM a => a
-mark_ = dom ("mark" :: Text)
+meter_ :: Element
+meter_ = createElement ("meter" :: Text)
 
-menu_ :: DOM a => a
-menu_ = dom ("menu" :: Text)
+nav_ :: Element
+nav_ = createElement ("nav" :: Text)
 
-menuitem_ :: DOM a => a
-menuitem_ = dom ("menuitem" :: Text)
+noscript_ :: Element
+noscript_ = createElement ("noscript" :: Text)
 
-meta_ :: DOM a => a
-meta_ = dom ("meta" :: Text)
+object_ :: Element
+object_ = createElement ("object" :: Text)
 
-meter_ :: DOM a => a
-meter_ = dom ("meter" :: Text)
+ol_ :: Element
+ol_ = createElement ("ol" :: Text)
 
-nav_ :: DOM a => a
-nav_ = dom ("nav" :: Text)
+optgroup_ :: Element
+optgroup_ = createElement ("optgroup" :: Text)
 
-noscript_ :: DOM a => a
-noscript_ = dom ("noscript" :: Text)
+option_ :: Element
+option_ = createElement ("option" :: Text)
 
-object_ :: DOM a => a
-object_ = dom ("object" :: Text)
+output_ :: Element
+output_ = createElement ("output" :: Text)
 
-ol_ :: DOM a => a
-ol_ = dom ("ol" :: Text)
+p_ :: Element
+p_ = createElement ("p" :: Text)
 
-optgroup_ :: DOM a => a
-optgroup_ = dom ("optgroup" :: Text)
+param_ :: Element
+param_ = createElement ("param" :: Text)
 
-option_ :: DOM a => a
-option_ = dom ("option" :: Text)
+picture_ :: Element
+picture_ = createElement ("picture" :: Text)
 
-output_ :: DOM a => a
-output_ = dom ("output" :: Text)
+pre_ :: Element
+pre_ = createElement ("pre" :: Text)
 
-p_ :: DOM a => a
-p_ = dom ("p" :: Text)
+progress_ :: Element
+progress_ = createElement ("progress" :: Text)
 
-param_ :: DOM a => a
-param_ = dom ("param" :: Text)
+q_ :: Element
+q_ = createElement ("q" :: Text)
 
-picture_ :: DOM a => a
-picture_ = dom ("picture" :: Text)
+rp_ :: Element
+rp_ = createElement ("rp" :: Text)
 
-pre_ :: DOM a => a
-pre_ = dom ("pre" :: Text)
+rt_ :: Element
+rt_ = createElement ("rt" :: Text)
 
-progress_ :: DOM a => a
-progress_ = dom ("progress" :: Text)
+ruby_ :: Element
+ruby_ = createElement ("ruby" :: Text)
 
-q_ :: DOM a => a
-q_ = dom ("q" :: Text)
+s_ :: Element
+s_ = createElement ("s" :: Text)
 
-rp_ :: DOM a => a
-rp_ = dom ("rp" :: Text)
+samp_ :: Element
+samp_ = createElement ("samp" :: Text)
 
-rt_ :: DOM a => a
-rt_ = dom ("rt" :: Text)
+script_ :: Element
+script_ = createElement ("script" :: Text)
 
-ruby_ :: DOM a => a
-ruby_ = dom ("ruby" :: Text)
+section_ :: Element
+section_ = createElement ("section" :: Text)
 
-s_ :: DOM a => a
-s_ = dom ("s" :: Text)
+select_ :: Element
+select_ = createElement ("select" :: Text)
 
-samp_ :: DOM a => a
-samp_ = dom ("samp" :: Text)
+small_ :: Element
+small_ = createElement ("small" :: Text)
 
-script_ :: DOM a => a
-script_ = dom ("script" :: Text)
+source_ :: Element
+source_ = createElement ("source" :: Text)
 
-section_ :: DOM a => a
-section_ = dom ("section" :: Text)
+span_ :: Element
+span_ = createElement ("span" :: Text)
 
-select_ :: DOM a => a
-select_ = dom ("select" :: Text)
+strong_ :: Element
+strong_ = createElement ("strong" :: Text)
 
-small_ :: DOM a => a
-small_ = dom ("small" :: Text)
+style_ :: Element
+style_ = createElement ("style" :: Text)
 
-source_ :: DOM a => a
-source_ = dom ("source" :: Text)
+sub_ :: Element
+sub_ = createElement ("sub" :: Text)
 
-span_ :: DOM a => a
-span_ = dom ("span" :: Text)
+summary_ :: Element
+summary_ = createElement ("summary" :: Text)
 
-strong_ :: DOM a => a
-strong_ = dom ("strong" :: Text)
+sup_ :: Element
+sup_ = createElement ("sup" :: Text)
 
-style_ :: DOM a => a
-style_ = dom ("style" :: Text)
+table_ :: Element
+table_ = createElement ("table" :: Text)
 
-sub_ :: DOM a => a
-sub_ = dom ("sub" :: Text)
+tbody_ :: Element
+tbody_ = createElement ("tbody" :: Text)
 
-summary_ :: DOM a => a
-summary_ = dom ("summary" :: Text)
+td_ :: Element
+td_ = createElement ("td" :: Text)
 
-sup_ :: DOM a => a
-sup_ = dom ("sup" :: Text)
+textarea_ :: Element
+textarea_ = createElement ("textarea" :: Text)
 
-table_ :: DOM a => a
-table_ = dom ("table" :: Text)
+tfoot_ :: Element
+tfoot_ = createElement ("tfoot" :: Text)
 
-tbody_ :: DOM a => a
-tbody_ = dom ("tbody" :: Text)
+th_ :: Element
+th_ = createElement ("th" :: Text)
 
-td_ :: DOM a => a
-td_ = dom ("td" :: Text)
+thead_ :: Element
+thead_ = createElement ("thead" :: Text)
 
-textarea_ :: DOM a => a
-textarea_ = dom ("textarea" :: Text)
+time_ :: Element
+time_ = createElement ("time" :: Text)
 
-tfoot_ :: DOM a => a
-tfoot_ = dom ("tfoot" :: Text)
+title_ :: Element
+title_ = createElement ("title" :: Text)
 
-th_ :: DOM a => a
-th_ = dom ("th" :: Text)
+tr_ :: Element
+tr_ = createElement ("tr" :: Text)
 
-thead_ :: DOM a => a
-thead_ = dom ("thead" :: Text)
+track_ :: Element
+track_ = createElement ("track" :: Text)
 
-time_ :: DOM a => a
-time_ = dom ("time" :: Text)
+u_ :: Element
+u_ = createElement ("u" :: Text)
 
-title_ :: DOM a => a
-title_ = dom ("title" :: Text)
+ul_ :: Element
+ul_ = createElement ("ul" :: Text)
 
-tr_ :: DOM a => a
-tr_ = dom ("tr" :: Text)
+var_ :: Element
+var_ = createElement ("var" :: Text)
 
-track_ :: DOM a => a
-track_ = dom ("track" :: Text)
+video_ :: Element
+video_ = createElement ("video" :: Text)
 
-u_ :: DOM a => a
-u_ = dom ("u" :: Text)
+wbr_ :: Element
+wbr_ = createElement ("wbr" :: Text)
 
-ul_ :: DOM a => a
-ul_ = dom ("ul" :: Text)
+circle_ :: Element
+circle_ = createElement ("circle" :: Text)
 
-var_ :: DOM a => a
-var_ = dom ("var" :: Text)
+defs_ :: Element
+defs_ = createElement ("defs" :: Text)
 
-video_ :: DOM a => a
-video_ = dom ("video" :: Text)
+ellipse_ :: Element
+ellipse_ = createElement ("ellipse" :: Text)
 
-wbr_ :: DOM a => a
-wbr_ = dom ("wbr" :: Text)
+g_ :: Element
+g_ = createElement ("g" :: Text)
 
-circle_ :: DOM a => a
-circle_ = dom ("circle" :: Text)
+line_ :: Element
+line_ = createElement ("line" :: Text)
 
-defs_ :: DOM a => a
-defs_ = dom ("defs" :: Text)
+linearGradient_ :: Element
+linearGradient_ = createElement ("linearGradient" :: Text)
 
-ellipse_ :: DOM a => a
-ellipse_ = dom ("ellipse" :: Text)
+mask_ :: Element
+mask_ = createElement ("mask" :: Text)
 
-g_ :: DOM a => a
-g_ = dom ("g" :: Text)
+path_ :: Element
+path_ = createElement ("path" :: Text)
 
-line_ :: DOM a => a
-line_ = dom ("line" :: Text)
+pattern_ :: Element
+pattern_ = createElement ("pattern" :: Text)
 
-linearGradient_ :: DOM a => a
-linearGradient_ = dom ("linearGradient" :: Text)
+polygon_ :: Element
+polygon_ = createElement ("polygon" :: Text)
 
-mask_ :: DOM a => a
-mask_ = dom ("mask" :: Text)
+polyline_ :: Element
+polyline_ = createElement ("polyline" :: Text)
 
-path_ :: DOM a => a
-path_ = dom ("path" :: Text)
+radialGradient_ :: Element
+radialGradient_ = createElement ("radialGradient" :: Text)
 
-pattern_ :: DOM a => a
-pattern_ = dom ("pattern" :: Text)
+rect_ :: Element
+rect_ = createElement ("rect" :: Text)
 
-polygon_ :: DOM a => a
-polygon_ = dom ("polygon" :: Text)
+stop_ :: Element
+stop_ = createElement ("stop" :: Text)
 
-polyline_ :: DOM a => a
-polyline_ = dom ("polyline" :: Text)
+svg_ :: Element
+svg_ = createElement ("svg" :: Text)
 
-radialGradient_ :: DOM a => a
-radialGradient_ = dom ("radialGradient" :: Text)
+text_ :: Element
+text_ = createElement ("text" :: Text)
 
-rect_ :: DOM a => a
-rect_ = dom ("rect" :: Text)
-
-stop_ :: DOM a => a
-stop_ = dom ("stop" :: Text)
-
-svg_ :: DOM a => a
-svg_ = dom ("svg" :: Text)
-
-text_ :: DOM a => a
-text_ = dom ("text" :: Text)
-
-tspan_ :: DOM a => a
-tspan_ = dom ("tspan" :: Text)
+tspan_ :: Element
+tspan_ = createElement ("tspan" :: Text)

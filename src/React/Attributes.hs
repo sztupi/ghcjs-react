@@ -5,11 +5,11 @@ import Control.Lens
 import Control.Monad
 import Data.Text (Text, singleton)
 import Data.HashMap.Strict (HashMap)
+import GHCJS.Foreign
+import GHCJS.Types
+import React (Prop', Prop)
 
-type Prop' a = Lens' (HashMap Text Text) a
-type Prop a = Prop' (Maybe a)
-
-present :: Lens' (Maybe Text) Bool
+present :: Lens' (Maybe JSString) Bool
 present = lens getter setter
   where
     getter Nothing = False
@@ -17,6 +17,9 @@ present = lens getter setter
 
     setter _ False = Nothing
     setter _ True = Just ""
+
+jsString :: (ToJSString a, FromJSString a) => Iso' a JSString
+jsString = iso toJSString fromJSString
 
 {-
 data AcceptAttribute = Extension
@@ -30,16 +33,16 @@ accept :: [AcceptAttribute] -> Prop
 -}
 
 -- TODO: make it better than just Text
-acceptCharset :: Prop Text
+acceptCharset :: Prop JSString
 acceptCharset = at "acceptCharset"
 
 accessKey :: Prop Char
 accessKey = at "accessKey" . lens getter setter
   where
-    getter t = join $ fmap (fmap fst . uncons) t
-    setter _ = fmap singleton
+    getter t = join $ fmap (fmap fst . (\x -> uncons (x :: Text)) . fromJSString) t
+    setter _ = fmap (toJSString . singleton)
 
-action :: Prop Text
+action :: Prop JSString
 action = at "action"
 
 allowFullScreen :: Prop' Bool
@@ -48,7 +51,7 @@ allowFullScreen = at "allowFullScreen" . present
 allowTransparency :: Prop' Bool
 allowTransparency = at "allowTransparency" . present
 
-alt :: Prop Text
+alt :: Prop JSString
 alt = at "alt"
 
 async :: Prop' Bool
@@ -66,41 +69,41 @@ cellPadding :: Prop Double
 cellSpacing :: Prop Double
 
 -- TODO something better than just Text
-charSet :: Prop Text
+charSet :: Prop JSString
 
 checked :: Prop Bool
 
-classID :: Prop Text
+classID :: Prop JSString
 -}
 
-className :: Prop Text
+className :: Prop JSString
 className = at "className"
 
 {-
 cols :: Prop Int
 
 colSpan :: Prop Int
-content :: Prop Text
+content :: Prop JSString
 
 -- "true" | "false"
 contentEditable :: Prop Bool
 
 -- TODO make CSS ID instead of Text
-contextMenu :: Prop Text
+contextMenu :: Prop JSString
 
 controls :: Prop Bool
 
-coords :: Prop Text
+coords :: Prop JSString
 
 data CrossOrigin = Anonymous | UseCredentials
 
 crossOrigin :: Prop CrossOrigin
 
 -- TODO URI
-data_ :: Prop Text
+data_ :: Prop JSString
 
 -- TODO Make classy
-dateTime :: Prop Text
+dateTime :: Prop JSString
 
 defer :: Prop Bool
 
@@ -132,7 +135,7 @@ hidden :: Prop Bool
 
 -}
 -- TODO URI
-href :: Prop Text
+href :: Prop JSString
 href = at "href"
 
 {-
@@ -148,10 +151,10 @@ httpEquiv :: Prop Equiv
 icon :: Prop Text
 -}
 
-id_ :: Prop Text
+id_ :: Prop JSString
 id_ = at "id"
 
-label :: Prop Text
+label :: Prop JSString
 label = at "label"
 
 {-
@@ -202,14 +205,14 @@ radioGroup :: Prop Text
 
 readOnly :: Prop Bool
 -}
-rel :: Prop Text
+rel :: Prop JSString
 rel = at "rel"
 
 {-
 required :: Prop Bool
 -}
 
-role :: Prop Text
+role :: Prop JSString
 role = at "role"
 
 {-
@@ -285,7 +288,7 @@ itemScope :: Prop Text
 itemType :: Prop Text
 -}
 
-dangerouslySetInnerHTML :: Prop Text
+dangerouslySetInnerHTML :: Prop JSString
 dangerouslySetInnerHTML = at "dangerouslySetInnerHTML"
 
 {-
@@ -335,5 +338,10 @@ y
 aria
 -}
 
-prop :: Text -> Prop Text
-prop = at
+casted :: Functor f => Lens' (f (JSRef a)) (f (JSRef b))
+casted = lens (fmap castRef) (\_ b -> fmap castRef b)
+
+prop :: Text -> Prop (JSRef a)
+prop t = at t . casted
+
+

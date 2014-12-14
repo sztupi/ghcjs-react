@@ -1,25 +1,44 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell #-}
 module React where
 import Control.Monad
+import Control.Monad.Trans
 import Control.Monad.Trans.Reader
+import Control.Monad.Trans.Writer.Strict
 import Data.Aeson
 import Data.Monoid
-import Data.HashMap.Strict (HashMap)
+import Data.HashMap.Strict (HashMap, toList)
 import Data.Text (Text)
 import qualified GHCJS.DOM as DOM
 import qualified GHCJS.DOM.Types as DOM
 import GHCJS.Foreign
 import GHCJS.Marshal
 import GHCJS.Types
-import Control.Lens ((^.))
+import Control.Lens (Lens', (^.), (^?))
+import Control.Lens.TH
 import qualified Pipes.Safe as S
 import System.IO.Unsafe
+
+newtype ReactElement = Element (JSObject ())
+
+data ReactNode = TextNode !Text
+               | ElemNode !ReactElement
 
 type DOMElement = DOM.Element
 type ComponentContext = JSObject ()
 type ReactM = S.SafeT IO
 type ComponentT m = ReaderT ComponentContext m
 type ComponentM = Reader ComponentContext
+type Prop' a = Lens' (HashMap Text JSString) a
+type Prop a = Prop' (Maybe a)
+type Props = HashMap Text JSString
+type Element = Maybe Props -> [ReactNode] -> ReactElement
 
 runReact :: ReactM a -> IO a
 runReact = S.runSafeT
@@ -38,22 +57,24 @@ ifM (Just x) f = f x
 newtype Component = Component (JSRef Component)
 newtype ComponentFactory st = ComponentFactory (JSFun (IO ReactElement))
 data ComponentSpecification st = ComponentSpecification
-  { componentRender           :: ComponentT IO ReactElement
-  , componentDisplayName      :: Maybe JSString
-  , componentGetInitialState  :: Maybe (IO Object)
-  , componentGetDefaultProps  :: Maybe (IO Object)
+  { componentSpecificationRender           :: ComponentT IO ReactElement
+  , componentSpecificationDisplayName      :: Maybe JSString
+  , componentSpecificationGetInitialState  :: Maybe (IO (JSRef st))
+  , componentSpecificationGetDefaultProps  :: Maybe (IO (JSRef st))
   -- , componentGetPropTypes 
   -- , componentMixins
   -- , componentStatics
-  , componentWillMount        :: Maybe (ComponentT IO ())
-  , componentDidMount         :: Maybe (ComponentT IO ())
-  , componentWillReceiveProps :: Maybe (Object -> ComponentT IO ())
-  , componentShouldUpdate     :: Maybe (Object -> Object -> ComponentM Bool)
+  , componentSpecificationWillMount        :: Maybe (ComponentT IO ())
+  , componentSpecificationDidMount         :: Maybe (ComponentT IO ())
+  , componentSpecificationWillReceiveProps :: Maybe (JSRef st -> ComponentT IO ())
+  , componentSpecificationShouldUpdate     :: Maybe (JSRef st -> JSRef st -> ComponentM Bool)
   -- TODO prevent setState in this context
-  , componentWillUpdate       :: Maybe (Object -> Object -> ComponentT IO ())
-  , componentDidUpdate        :: Maybe (Object -> Object -> ComponentT IO ())
-  , componentWillUnmount      :: Maybe (ComponentT IO ())
+  , componentSpecificationWillUpdate       :: Maybe (JSRef st -> JSRef st -> ComponentT IO ())
+  , componentSpecificationDidUpdate        :: Maybe (JSRef st -> JSRef st -> ComponentT IO ())
+  , componentSpecificationWillUnmount      :: Maybe (ComponentT IO ())
   }
+
+makeFields ''ComponentSpecification
 
 -- TODO: should these support the optional callbacks?
 setState :: Object -> ComponentT IO ()
@@ -62,7 +83,7 @@ setState = undefined
 replaceState :: Object -> ComponentM ()
 replaceState = undefined
 
-forceUpdate :: ComponentM ()
+forceUpdate :: ComponentT m ()
 forceUpdate = undefined
 
 getDOMNode :: ComponentM DOMElement
@@ -85,7 +106,6 @@ currentProps = do
 currentState :: ComponentM Object
 currentState = undefined
 
-newtype ReactElement = Element (JSObject ())
 
 component :: ComponentT IO ReactElement -> ComponentSpecification st
 component f = ComponentSpecification f Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
@@ -98,7 +118,7 @@ foreign import javascript unsafe "reactWrapCallback($1)"
 
 wrapCallback c = do
   cb <- syncCallback2 AlwaysRetain False $ \this x -> do
-    (Element res) <- runReaderT (componentRender c) this
+    (Element res) <- runReaderT (c ^. render) this
     setProp ("result" :: JSString) res x
   w <- reactWrapCallback cb 
   return (w, cb)
@@ -114,7 +134,7 @@ createClass' c = do
     o <- newObj
     (wrapped, inner) <- wrapCallback c
     setProp ("render" :: JSString) wrapped o
-    ifM (componentDisplayName c) $ \n -> setProp ("displayName" :: JSString) n o
+    ifM (componentSpecificationDisplayName c) $ \n -> setProp ("displayName" :: JSString) n o
     return (inner, o)
   k <- S.register $ release f
   cf <- S.liftBase $ jsCreateClass o
@@ -123,21 +143,33 @@ createClass' c = do
 foreign import javascript unsafe "React.createElement.apply(null, [$1, $2].concat($3))"
   jsCreateElement :: JSRef a -> JSRef b -> JSArray c -> ReactElement
 
-type ReactNode = Either Text ReactElement
 
-type Props = HashMap Text Text
+class ToReactElement e f | e -> f where
+  createElement :: e -> f -- Maybe Props -> [ReactNode] -> ReactElement
 
-class ToReactElement e where
-  createElement :: e -> Maybe Props -> [ReactNode] -> ReactElement
+instance ToReactElement ReactElement ReactElement where
+  createElement = id
+
+makeProps :: Props -> JSRef a
+makeProps ps = unsafePerformIO $ do
+  o <- newObj
+  mapM_ (\(k, v) -> setProp k v o) (toList ps)
+  return o
+
+instance ToReactElement Text (Maybe Props -> [ReactNode] -> ReactElement) where
+  createElement e ps es = jsCreateElement (toJSString e) (maybe jsNull makeProps ps) (castChildren es)
+
+instance ToReactElement (ComponentFactory st) (Maybe Props -> ReactElement) where
+  createElement (ComponentFactory e) ps = jsCreateElement e (maybe jsNull makeProps ps) (castChildren [])
 
 castChildren :: [ReactNode] -> JSArray a
-castChildren = unsafePerformIO . toArray . fmap (either (castRef . toJSString) (\(Element ref) -> castRef ref))
+castChildren = unsafePerformIO . toArray . fmap mkNodeRef
+
+elem_ :: ReactElement -> ReactNode
+elem_ = ElemNode
 
 str_ :: Text -> ReactNode
-str_ = Left
-
-elem_ :: ToReactElement e => e -> Maybe Props -> [ReactNode] -> ReactNode
-elem_ e ps ns = Right $ createElement e ps ns
+str_ = TextNode
 
 noProps :: Maybe Props
 noProps = Nothing
@@ -145,18 +177,16 @@ noProps = Nothing
 props :: (Props -> Props) -> Maybe Props
 props f = Just $ f mempty
 
-instance ToReactElement Text where
-  createElement e ps es = jsCreateElement (toJSString e) (maybe jsNull (unsafePerformIO . toJSRef_aeson) ps) (castChildren es)
-
-instance ToReactElement (ComponentFactory st) where
-  createElement (ComponentFactory e) ps es = jsCreateElement e (maybe jsNull (unsafePerformIO . toJSRef_aeson) ps) (castChildren es)
-
 foreign import javascript unsafe "React.render($1, $2)"
   jsRender :: ReactElement -> DOMElement -> IO Component
 
-render :: ReactElement -> DOMElement -> ReactM Component
-render e d = S.liftBase $ jsRender e d
+renderElement :: ReactElement -> DOMElement -> ReactM Component
+renderElement e d = S.liftBase $ jsRender e d
 
 renderOn :: DOMElement -> ReactElement -> ReactM Component
-renderOn = flip render
+renderOn = flip renderElement
+
+mkNodeRef :: ReactNode -> JSRef a
+mkNodeRef (ElemNode (Element ref)) = castRef ref
+mkNodeRef (TextNode t) = castRef $ toJSString t
 

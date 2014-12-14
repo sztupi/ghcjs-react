@@ -34,7 +34,8 @@ library
                        pipes-safe,
                        unordered-containers,
                        transformers,
-                       lens-aeson
+                       lens-aeson,
+                       mtl
   hs-source-dirs:      src
   js-sources:          js/react-0.12.1.js, js/wrapper.js
   default-language:    Haskell2010
