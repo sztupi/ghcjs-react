@@ -40,6 +40,16 @@ component f = ComponentSpecification f Nothing
 foreign import javascript unsafe "React.createClass($1)"
   jsCreateClass :: JSObject (ComponentSpecification st) -> IO (ComponentFactory st)
 
+foreign import javascript unsafe "reactWrapCallback($1)"
+  reactWrapCallback :: JSFun (JSRef a -> IO ()) -> IO (JSFun (IO (JSRef a)))
+
+wrapCallback c = do
+  cb <- syncCallback1 AlwaysRetain False $ \x -> do
+    (Element res) <- componentRender c
+    setProp ("result" :: JSString) res x
+  w <- reactWrapCallback cb 
+  return (w, cb)
+
 createClass :: ComponentSpecification st
             -> ReactM (ComponentFactory st)
 createClass = fmap snd . createClass'
@@ -48,11 +58,11 @@ createClass' :: ComponentSpecification st
              -> ReactM (ReactM (), ComponentFactory st)
 createClass' c = do
   (f, o) <- S.liftBase $ do
-    f <- syncCallback AlwaysRetain False $ componentRender c
     o <- newObj
-    setProp ("render" :: JSString) f o
+    (wrapped, inner) <- wrapCallback c
+    setProp ("render" :: JSString) wrapped o
     ifM (componentDisplayName c) $ \n -> setProp ("displayName" :: JSString) n o
-    return (f, o)
+    return (inner, o)
   k <- S.register $ release f
   cf <- S.liftBase $ jsCreateClass o
   return (S.release k, cf)
@@ -62,7 +72,7 @@ foreign import javascript unsafe "React.createElement.apply(null, [$1, $2].conca
 
 type ReactNode = Either Text ReactElement
 
-type Props = HashMap Text Value
+type Props = HashMap Text Text
 
 class ToReactElement e where
   createElement :: e -> Props -> [ReactNode] -> ReactElement
