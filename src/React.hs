@@ -77,25 +77,41 @@ data ComponentSpecification st = ComponentSpecification
 makeFields ''ComponentSpecification
 
 -- TODO: should these support the optional callbacks?
-setState :: Object -> ComponentT IO ()
+setState :: Monad m => Props -> ComponentT m ()
 setState = undefined
 
-replaceState :: Object -> ComponentM ()
+replaceState :: Monad m => Props -> ComponentT m ()
 replaceState = undefined
 
-forceUpdate :: ComponentT m ()
-forceUpdate = undefined
+foreign import javascript unsafe "($1).forceUpdate()"
+  jsForceUpdate :: JSRef a -> IO ()
 
-getDOMNode :: ComponentM DOMElement
-getDOMNode = undefined
+forceUpdate :: MonadIO m => ComponentT m ()
+forceUpdate = ask >>= liftIO . jsForceUpdate
 
-isMounted :: ComponentM Bool
-isMounted = undefined
+foreign import javascript unsafe "($1).getDOMNode()"
+  jsGetDOMNode :: JSRef a -> IO (JSRef DOMElement)
 
-setProps :: Object -> ComponentM ()
+getDOMNode :: MonadIO m => ComponentT m (Maybe DOMElement)
+getDOMNode = do
+  ctxt <- ask
+  me <- liftIO $ jsGetDOMNode ctxt
+  return $ if isNull me
+    then Nothing
+    else Just $ DOM.Element $ castRef me
+
+foreign import javascript unsafe "($1).isMounted()"
+  jsIsMounted :: JSRef a -> IO JSBool
+
+isMounted :: MonadIO m => ComponentT m Bool
+isMounted = do
+  ctxt <- ask
+  liftIO $ fmap fromJSBool $ jsIsMounted ctxt
+
+setProps :: MonadIO m => Props -> ComponentT m ()
 setProps = undefined
 
-replaceProps :: Object -> ComponentM ()
+replaceProps :: MonadIO m => Props -> ComponentT m ()
 replaceProps = undefined
 
 currentProps :: Monad m => ComponentT m (JSRef a)
