@@ -33,7 +33,7 @@ type State = HashMap Text JSString
 type Element = Maybe Props -> [ReactNode] -> ReactElement
 
 newtype Component = Component (JSRef Component)
-newtype ComponentFactory m st = ComponentFactory (JSFun (IO ReactElement))
+newtype ComponentFactory st = ComponentFactory (JSFun (IO ReactElement))
 data ComponentSpecification st = ComponentSpecification
   { componentSpecificationRender           :: ComponentT IO ReactElement
   , componentSpecificationDisplayName      :: Maybe JSString
@@ -45,7 +45,7 @@ data ComponentSpecification st = ComponentSpecification
   , componentSpecificationWillMount        :: Maybe (ComponentT IO ())
   , componentSpecificationDidMount         :: Maybe (ComponentT IO ())
   , componentSpecificationWillReceiveProps :: Maybe (JSRef st -> ComponentT IO ())
-  , componentSpecificationShouldUpdate     :: Maybe (JSRef st -> JSRef st -> ComponentM Bool)
+  , componentSpecificationShouldUpdate     :: Maybe (JSRef st -> JSRef st -> ComponentT IO Bool)
   -- TODO prevent setState in this context
   , componentSpecificationWillUpdate       :: Maybe (JSRef st -> JSRef st -> ComponentT IO ())
   , componentSpecificationDidUpdate        :: Maybe (JSRef st -> JSRef st -> ComponentT IO ())

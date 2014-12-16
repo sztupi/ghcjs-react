@@ -23,8 +23,16 @@ import React.DOM
 getBody :: IO (Maybe DOMElement)
 getBody = currentDocument ^!? acts._Just.act documentGetBody._Just.to castToElement
 
+printMountInfo = isMounted >>= liftIO . print
+
 helloComponent :: ComponentSpecification st
-helloComponent = component render & displayName ?~ "Hello"
+helloComponent = component render
+  & displayName ?~ "Hello"
+  & willMount ?~ printMountInfo
+  & didMount ?~ printMountInfo
+  & willUnmount ?~ (liftIO $ putStrLn "Will unmount")
+  & shouldUpdate ?~ (\_ _ -> return False)
+  & didUpdate ?~ (\_ _ -> liftIO $ putStrLn "Updated!")
   where
     render = do
       ps <- currentProps

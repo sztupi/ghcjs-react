@@ -64,7 +64,7 @@ unsafeReadObject r = do
   let (Just (Object o)) = v
   return o
 
-ifM :: Maybe a -> (a -> IO ()) -> IO ()
+ifM :: Monad m => Maybe a -> (a -> m ()) -> m ()
 ifM Nothing _ = return ()
 ifM (Just x) f = f x
 
@@ -125,6 +125,24 @@ wrapCallback c = do
   w <- reactWrapCallback cb 
   return (w, cb)
 
+-- syncCallback3 :: ForeignRetention -> Bool -> (JSRef a -> JSRef b -> JSRef c -> IO ()) -> IO (JSFun (JSRef a -> JSArray b -> IO ()))
+syncCallback3 retainStrat runAsync f = do
+  inner <- syncCallback2 retainStrat runAsync $ \this rest -> do
+    x <- indexArray 0 rest
+    y <- indexArray 1 rest
+    f this (castRef x) (castRef y)
+  wrapped <- provideThisArb inner
+  return (wrapped, inner)
+
+wrapShouldUpdate retainStrat runAsync f = do
+  inner <- syncCallback2 retainStrat runAsync $ \this rest -> do
+    result <- indexArray 0 rest
+    x <- indexArray 1 rest
+    y <- indexArray 2 rest
+    f this result (castRef x) (castRef y)
+  wrapped <- provideThisArbWithResult inner
+  return (wrapped, inner)
+
 createClass :: (S.MonadMask m, MonadIO m) => ComponentSpecification st
                                           -> ReactT m (ComponentFactory st)
 createClass = fmap snd . createClass'
@@ -132,12 +150,76 @@ createClass = fmap snd . createClass'
 createClass' :: (S.MonadMask m, MonadIO m) => ComponentSpecification st
                                            -> ReactT m (ReactT m (), ComponentFactory st)
 createClass' c = do
-  (f, o) <- liftIO $ do
-    o <- newObj
+  o <- liftIO newObj
+
+  f <- liftIO $ do
     (wrapped, inner) <- wrapCallback c
     setProp ("render" :: JSString) wrapped o
-    ifM (componentSpecificationDisplayName c) $ \n -> setProp ("displayName" :: JSString) n o
-    return (inner, o)
+    return inner
+
+  ifM (componentSpecificationDisplayName c) $ \n ->
+    liftIO $ setProp ("displayName" :: JSString) n o
+
+  ifM (componentSpecificationWillMount c) $ \f -> do
+    (wrapped, inner) <- liftIO $ do
+      cb <- syncCallback1 AlwaysRetain False (runReaderT f)
+      w <- provideThis cb
+      return (w, cb)
+    liftIO $ setProp ("componentWillMount" :: JSString) wrapped o
+    S.register $ liftIO $ release inner
+    return ()
+
+  ifM (componentSpecificationDidMount c) $ \f -> do
+    (wrapped, inner) <- liftIO $ do
+      cb <- syncCallback1 AlwaysRetain False (runReaderT f)
+      w <- provideThis cb
+      return (w, cb)
+    liftIO $ setProp ("componentDidMount" :: JSString) wrapped o
+    S.register $ liftIO $ release inner
+    return ()
+
+  ifM (componentSpecificationWillReceiveProps c) $ \f -> do
+    (wrapped, inner) <- liftIO $ do
+      cb <- syncCallback2 AlwaysRetain False (\this x -> runReaderT (f x) this)
+      w <- provideThis cb
+      return (w, cb)
+    liftIO $ setProp ("componentWillReceiveProps" :: JSString) wrapped o
+    S.register $ liftIO $ release inner
+    return ()
+
+  ifM (componentSpecificationShouldUpdate c) $ \f -> do
+    (wrapped, inner) <- liftIO $ do
+      wrapShouldUpdate AlwaysRetain False $ \this result x y -> do
+        res <- runReaderT (f x y) this
+        resRef <- toJSRef res
+        setProp ("result" :: JSString) resRef result
+    liftIO $ setProp ("shouldComponentUpdate" :: JSString) wrapped o
+    S.register $ liftIO $ release inner
+    return ()
+
+  ifM (componentSpecificationWillUpdate c) $ \f -> do
+    (wrapped, inner) <- liftIO $ do
+      syncCallback3 AlwaysRetain False (\this x y -> runReaderT (f x y) this)
+    liftIO $ setProp ("componentWillUpdate" :: JSString) wrapped o
+    S.register $ liftIO $ release inner
+    return ()
+
+  ifM (componentSpecificationDidUpdate c) $ \f -> do
+    (wrapped, inner) <- liftIO $ do
+      syncCallback3 AlwaysRetain False (\this x y -> runReaderT (f x y) this)
+    liftIO $ setProp ("componentDidUpdate" :: JSString) wrapped o
+    S.register $ liftIO $ release inner
+    return ()
+
+  ifM (componentSpecificationWillUnmount c) $ \f -> do
+    (wrapped, inner) <- liftIO $ do
+      cb <- syncCallback1 AlwaysRetain False (runReaderT f)
+      w <- provideThis cb
+      return (w, cb)
+    liftIO $ setProp ("componentWillUnmount" :: JSString) wrapped o
+    S.register $ liftIO $ release inner
+    return ()
+
   k <- S.register $ liftIO $ release f
   cf <- liftIO $ jsCreateClass o
   return (S.release k, cf)

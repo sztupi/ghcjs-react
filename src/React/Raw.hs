@@ -1,14 +1,23 @@
 module React.Raw where
 import qualified GHCJS.DOM as DOM
 import qualified GHCJS.DOM.Types as DOM
-import GHCJS.Types
-import React.Types
+import           GHCJS.Types
+import           React.Types
 
 foreign import javascript unsafe "React.createClass($1)"
   jsCreateClass :: JSObject (ComponentSpecification st) -> IO (ComponentFactory st)
 
 foreign import javascript unsafe "reactWrapCallback($1)"
   reactWrapCallback :: JSFun (JSRef b -> JSRef a -> IO ()) -> IO (JSFun (IO (JSRef a)))
+
+foreign import javascript unsafe "provideThis($1)"
+  provideThis :: JSFun a -> IO (JSFun (JSRef this -> a))
+
+foreign import javascript unsafe "provideThisArb($1)"
+  provideThisArb :: JSFun (JSRef this -> JSArray a -> IO c) -> IO (JSFun (JSRef this -> JSArray a -> IO c))
+
+foreign import javascript unsafe "provideThisArbWithResult($1)"
+  provideThisArbWithResult :: JSFun (JSRef this -> JSArray a -> IO c) -> IO (JSFun (JSRef this -> JSArray a -> IO c))
 
 foreign import javascript unsafe "React.createElement.apply(null, [$1, $2].concat($3))"
   jsCreateElement :: JSRef a -> JSRef b -> JSArray c -> ReactElement
