@@ -5,15 +5,37 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TemplateHaskell #-}
-module React where
+module React (
+  runReact,
+  renderElement,
+  renderOn,
+  component,
+  createClass,
+  createClass',
+  ToReactElement(..),
+  elem_,
+  str_,
+  props,
+  noProps,
+  currentState,
+  setState,
+  replaceState,
+  currentProps,
+  setProps,
+  replaceProps,
+  forceUpdate,
+  getDOMNode,
+  isMounted,
+  module React.Types,
+  module React.DOM,
+  module React.Attributes
+) where
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Writer.Strict
 import Data.Aeson
 import Data.Monoid
-import Data.HashMap.Strict (HashMap, toList)
 import Data.Text (Text)
 import qualified GHCJS.DOM as DOM
 import qualified GHCJS.DOM.Types as DOM
@@ -21,26 +43,18 @@ import GHCJS.Foreign
 import GHCJS.Marshal
 import GHCJS.Types
 import Control.Lens (Lens', (^.), (^?))
-import Control.Lens.TH
 import qualified Pipes.Safe as S
+import React.Attributes
+import React.DOM
+import React.Internal
+import React.Raw
+import React.Types
 import System.IO.Unsafe
 
-newtype ReactElement = Element (JSObject ())
+{- $primitives
+-}
 
-data ReactNode = TextNode !Text
-               | ElemNode !ReactElement
-
-type DOMElement = DOM.Element
-type ComponentContext = JSObject ()
-type ReactM = S.SafeT IO
-type ComponentT m = ReaderT ComponentContext m
-type ComponentM = Reader ComponentContext
-type Prop' a = Lens' (HashMap Text JSString) a
-type Prop a = Prop' (Maybe a)
-type Props = HashMap Text JSString
-type Element = Maybe Props -> [ReactNode] -> ReactElement
-
-runReact :: ReactM a -> IO a
+runReact :: (S.MonadMask m, MonadIO m) => ReactT m a -> m a
 runReact = S.runSafeT
 
 unsafeReadObject :: JSRef Value -> IO Object
@@ -54,43 +68,19 @@ ifM :: Maybe a -> (a -> IO ()) -> IO ()
 ifM Nothing _ = return ()
 ifM (Just x) f = f x
 
-newtype Component = Component (JSRef Component)
-newtype ComponentFactory st = ComponentFactory (JSFun (IO ReactElement))
-data ComponentSpecification st = ComponentSpecification
-  { componentSpecificationRender           :: ComponentT IO ReactElement
-  , componentSpecificationDisplayName      :: Maybe JSString
-  , componentSpecificationGetInitialState  :: Maybe (IO (JSRef st))
-  , componentSpecificationGetDefaultProps  :: Maybe (IO (JSRef st))
-  -- , componentGetPropTypes 
-  -- , componentMixins
-  -- , componentStatics
-  , componentSpecificationWillMount        :: Maybe (ComponentT IO ())
-  , componentSpecificationDidMount         :: Maybe (ComponentT IO ())
-  , componentSpecificationWillReceiveProps :: Maybe (JSRef st -> ComponentT IO ())
-  , componentSpecificationShouldUpdate     :: Maybe (JSRef st -> JSRef st -> ComponentM Bool)
-  -- TODO prevent setState in this context
-  , componentSpecificationWillUpdate       :: Maybe (JSRef st -> JSRef st -> ComponentT IO ())
-  , componentSpecificationDidUpdate        :: Maybe (JSRef st -> JSRef st -> ComponentT IO ())
-  , componentSpecificationWillUnmount      :: Maybe (ComponentT IO ())
-  }
-
-makeFields ''ComponentSpecification
-
 -- TODO: should these support the optional callbacks?
-setState :: Monad m => Props -> ComponentT m ()
-setState = undefined
+setState :: MonadIO m => State -> ComponentT m ()
+setState st = do
+  ctxt <- ask
+  liftIO $ jsSetState ctxt (makeProps st)
 
-replaceState :: Monad m => Props -> ComponentT m ()
-replaceState = undefined
-
-foreign import javascript unsafe "($1).forceUpdate()"
-  jsForceUpdate :: JSRef a -> IO ()
+replaceState :: MonadIO m => State -> ComponentT m ()
+replaceState st = do
+  ctxt <- ask
+  liftIO $ jsReplaceState ctxt (makeProps st)
 
 forceUpdate :: MonadIO m => ComponentT m ()
 forceUpdate = ask >>= liftIO . jsForceUpdate
-
-foreign import javascript unsafe "($1).getDOMNode()"
-  jsGetDOMNode :: JSRef a -> IO (JSRef DOMElement)
 
 getDOMNode :: MonadIO m => ComponentT m (Maybe DOMElement)
 getDOMNode = do
@@ -100,37 +90,33 @@ getDOMNode = do
     then Nothing
     else Just $ DOM.Element $ castRef me
 
-foreign import javascript unsafe "($1).isMounted()"
-  jsIsMounted :: JSRef a -> IO JSBool
-
 isMounted :: MonadIO m => ComponentT m Bool
 isMounted = do
   ctxt <- ask
   liftIO $ fmap fromJSBool $ jsIsMounted ctxt
 
 setProps :: MonadIO m => Props -> ComponentT m ()
-setProps = undefined
+setProps ps = do
+  ctxt <- ask
+  liftIO $ jsSetProps ctxt (makeProps ps)
 
 replaceProps :: MonadIO m => Props -> ComponentT m ()
-replaceProps = undefined
+replaceProps ps = do
+  ctxt <- ask
+  liftIO $ jsReplaceProps ctxt (makeProps ps)
 
 currentProps :: Monad m => ComponentT m (JSRef a)
 currentProps = do
   ctxt <- ask
   return $ unsafePerformIO $ getProp ("props" :: JSString) ctxt
 
-currentState :: ComponentM Object
-currentState = undefined
-
+currentState :: Monad m => ComponentT m (JSRef a)
+currentState = do
+  ctxt <- ask
+  return $ unsafePerformIO $ getProp ("state" :: JSString) ctxt
 
 component :: ComponentT IO ReactElement -> ComponentSpecification st
 component f = ComponentSpecification f Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-
-foreign import javascript unsafe "React.createClass($1)"
-  jsCreateClass :: JSObject (ComponentSpecification st) -> IO (ComponentFactory st)
-
-foreign import javascript unsafe "reactWrapCallback($1)"
-  reactWrapCallback :: JSFun (JSRef b -> JSRef a -> IO ()) -> IO (JSFun (IO (JSRef a)))
 
 wrapCallback c = do
   cb <- syncCallback2 AlwaysRetain False $ \this x -> do
@@ -139,47 +125,22 @@ wrapCallback c = do
   w <- reactWrapCallback cb 
   return (w, cb)
 
-createClass :: ComponentSpecification st
-            -> ReactM (ComponentFactory st)
+createClass :: (S.MonadMask m, MonadIO m) => ComponentSpecification st
+                                          -> ReactT m (ComponentFactory st)
 createClass = fmap snd . createClass'
 
-createClass' :: ComponentSpecification st
-             -> ReactM (ReactM (), ComponentFactory st)
+createClass' :: (S.MonadMask m, MonadIO m) => ComponentSpecification st
+                                           -> ReactT m (ReactT m (), ComponentFactory st)
 createClass' c = do
-  (f, o) <- S.liftBase $ do
+  (f, o) <- liftIO $ do
     o <- newObj
     (wrapped, inner) <- wrapCallback c
     setProp ("render" :: JSString) wrapped o
     ifM (componentSpecificationDisplayName c) $ \n -> setProp ("displayName" :: JSString) n o
     return (inner, o)
-  k <- S.register $ release f
-  cf <- S.liftBase $ jsCreateClass o
+  k <- S.register $ liftIO $ release f
+  cf <- liftIO $ jsCreateClass o
   return (S.release k, cf)
-
-foreign import javascript unsafe "React.createElement.apply(null, [$1, $2].concat($3))"
-  jsCreateElement :: JSRef a -> JSRef b -> JSArray c -> ReactElement
-
-
-class ToReactElement e f | e -> f where
-  createElement :: e -> f -- Maybe Props -> [ReactNode] -> ReactElement
-
-instance ToReactElement ReactElement ReactElement where
-  createElement = id
-
-makeProps :: Props -> JSRef a
-makeProps ps = unsafePerformIO $ do
-  o <- newObj
-  mapM_ (\(k, v) -> setProp k v o) (toList ps)
-  return o
-
-instance ToReactElement Text (Maybe Props -> [ReactNode] -> ReactElement) where
-  createElement e ps es = jsCreateElement (toJSString e) (maybe jsNull makeProps ps) (castChildren es)
-
-instance ToReactElement (ComponentFactory st) (Maybe Props -> ReactElement) where
-  createElement (ComponentFactory e) ps = jsCreateElement e (maybe jsNull makeProps ps) (castChildren [])
-
-castChildren :: [ReactNode] -> JSArray a
-castChildren = unsafePerformIO . toArray . fmap mkNodeRef
 
 elem_ :: ReactElement -> ReactNode
 elem_ = ElemNode
@@ -193,16 +154,9 @@ noProps = Nothing
 props :: (Props -> Props) -> Maybe Props
 props f = Just $ f mempty
 
-foreign import javascript unsafe "React.render($1, $2)"
-  jsRender :: ReactElement -> DOMElement -> IO Component
+renderElement :: MonadIO m => ReactElement -> DOMElement -> ReactT m Component
+renderElement e d = liftIO $ jsRender e d
 
-renderElement :: ReactElement -> DOMElement -> ReactM Component
-renderElement e d = S.liftBase $ jsRender e d
-
-renderOn :: DOMElement -> ReactElement -> ReactM Component
+renderOn :: MonadIO m => DOMElement -> ReactElement -> ReactT m Component
 renderOn = flip renderElement
-
-mkNodeRef :: ReactNode -> JSRef a
-mkNodeRef (ElemNode (Element ref)) = castRef ref
-mkNodeRef (TextNode t) = castRef $ toJSString t
 

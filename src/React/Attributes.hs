@@ -7,7 +7,7 @@ import Data.Text (Text, singleton)
 import Data.HashMap.Strict (HashMap)
 import GHCJS.Foreign
 import GHCJS.Types
-import React (Prop', Prop)
+import React.Types (Prop', Prop)
 
 present :: Lens' (Maybe JSString) Bool
 present = lens getter setter

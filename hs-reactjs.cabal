@@ -18,11 +18,11 @@ cabal-version:       >=1.10
 executable             react-test
   main-is:             Main.hs
   -- ghcjs-options:       -O2
-  build-depends:       base, ghcjs-base, ghcjs-dom, hs-reactjs, text, lens, transformers, lens-aeson, mtl
+  build-depends:       base, ghcjs-base, ghcjs-dom, hs-reactjs, text, lens, transformers, lens-aeson, mtl, pipes-safe
   default-language:    Haskell2010
 
 library
-  exposed-modules:     React, React.Attributes, React.DOM
+  exposed-modules:     React, React.Attributes, React.DOM, React.Raw, React.Types, React.Internal
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.7 && <4.8,
@@ -35,7 +35,8 @@ library
                        unordered-containers,
                        transformers,
                        lens-aeson,
-                       mtl
+                       mtl,
+                       exceptions
   hs-source-dirs:      src
   js-sources:          js/react-0.12.1.js, js/wrapper.js
   default-language:    Haskell2010

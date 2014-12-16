@@ -2,7 +2,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 module React.DOM where
-import React
+import React.Internal
+import React.Types
 import Data.Text (Text)
 
 a_ :: Element
