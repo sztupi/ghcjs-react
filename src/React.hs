@@ -28,7 +28,7 @@ module React (
   isMounted,
   module React.Types,
   module React.DOM,
-  module React.Attributes
+  module React.Props
 ) where
 import Control.Monad
 import Control.Monad.Trans
@@ -44,7 +44,7 @@ import GHCJS.Marshal
 import GHCJS.Types
 import Control.Lens (Lens', (^.), (^?))
 import qualified Pipes.Safe as S
-import React.Attributes
+import React.Props
 import React.DOM
 import React.Internal
 import React.Raw
@@ -115,7 +115,7 @@ currentState = do
   ctxt <- ask
   return $ unsafePerformIO $ getProp ("state" :: JSString) ctxt
 
-component :: ComponentT IO ReactElement -> ComponentSpecification st
+component :: ComponentT IO ReactElement -> ComponentSpecification IO ps st
 component f = ComponentSpecification f Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 wrapCallback c = do
@@ -125,7 +125,6 @@ wrapCallback c = do
   w <- reactWrapCallback cb 
   return (w, cb)
 
--- syncCallback3 :: ForeignRetention -> Bool -> (JSRef a -> JSRef b -> JSRef c -> IO ()) -> IO (JSFun (JSRef a -> JSArray b -> IO ()))
 syncCallback3 retainStrat runAsync f = do
   inner <- syncCallback2 retainStrat runAsync $ \this rest -> do
     x <- indexArray 0 rest
@@ -143,12 +142,13 @@ wrapShouldUpdate retainStrat runAsync f = do
   wrapped <- provideThisArbWithResult inner
   return (wrapped, inner)
 
-createClass :: (S.MonadMask m, MonadIO m) => ComponentSpecification st
-                                          -> ReactT m (ComponentFactory st)
+-- createClass :: (S.MonadMask m, MonadIO m) => ComponentSpecification m ps st
+                                          -- -> ReactT m (ComponentFactory m st)
+createClass :: (S.MonadMask m, MonadIO m) => ComponentSpecification IO ps st -> ReactT m (ComponentFactory m' st)
 createClass = fmap snd . createClass'
 
-createClass' :: (S.MonadMask m, MonadIO m) => ComponentSpecification st
-                                           -> ReactT m (ReactT m (), ComponentFactory st)
+createClass' :: (S.MonadMask m, MonadIO m) => ComponentSpecification IO ps st
+                                           -> ReactT m (ReactT m (), ComponentFactory m' st)
 createClass' c = do
   o <- liftIO newObj
 
@@ -242,3 +242,51 @@ renderElement e d = liftIO $ jsRender e d
 renderOn :: MonadIO m => DOMElement -> ReactElement -> ReactT m Component
 renderOn = flip renderElement
 
+eventList :: [JSString]
+eventList =
+  [ "onCopy"
+  , "onCut"
+  , "onPaste"
+  , "onKeyDown"
+  , "onKeyPress"
+  , "onKeyUp"
+  , "onFocus"
+  , "onBlur"
+  , "onChange"
+  , "onInput"
+  , "onSubmit"
+  , "onClick"
+  , "onDoubleClick"
+  , "onDrag"
+  , "onDragEnd"
+  , "onDragEnter"
+  , "onDragExit"
+  , "onDragLeave"
+  , "onDragOver"
+  , "onDragStart"
+  , "onDrop"
+  , "onMouseDown"
+  , "onMouseEnter"
+  , "onMouseLeave"
+  , "onMouseMove"
+  , "onMouseOut"
+  , "onMouseOver"
+  , "onMouseUp"
+  , "onTouchCancel"
+  , "onTouchEnd"
+  , "onTouchMove"
+  , "onScroll"
+  , "onWheel"
+  ]
+
+{-
+retainEvents :: Props -> HashMap Text (JSFun ()) -> IO (HashMap Text (JSFun ()))
+retainEvents
+
+maybeReleaseEvents :: JSRef ps -> HashMap Text (JSFun ()) -> IO ()
+maybeReleaseEvents newProps registered = forM_ eventList $ \eventName -> do
+  prop <- getProp eventName newProps
+  current = lookup eventName registered
+  case current of
+    Nothing -> 
+-}
