@@ -5,7 +5,7 @@ import           GHCJS.Types
 import           React.Types
 
 foreign import javascript unsafe "React.createClass($1)"
-  jsCreateClass :: JSObject (ComponentSpecification st) -> IO (ComponentFactory st)
+  jsCreateClass :: JSObject (ComponentSpecification m ps st) -> IO (ComponentFactory m st)
 
 foreign import javascript unsafe "reactWrapCallback($1)"
   reactWrapCallback :: JSFun (JSRef b -> JSRef a -> IO ()) -> IO (JSFun (IO (JSRef a)))

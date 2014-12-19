@@ -25,20 +25,20 @@ getBody = currentDocument ^!? acts._Just.act documentGetBody._Just.to castToElem
 
 printMountInfo = isMounted >>= liftIO . print
 
-helloComponent :: ComponentSpecification st
+helloComponent :: ComponentSpecification IO ps st
 helloComponent = component render
   & displayName ?~ "Hello"
   & willMount ?~ printMountInfo
   & didMount ?~ printMountInfo
   & willUnmount ?~ (liftIO $ putStrLn "Will unmount")
-  & shouldUpdate ?~ (\_ _ -> return False)
+  & shouldUpdate ?~ (\_ _ -> return True)
   & didUpdate ?~ (\_ _ -> liftIO $ putStrLn "Updated!")
   where
     render = do
       ps <- currentProps
       nameRef <- liftIO $ getPropMaybe ("number" :: Text) ps
       let name = fromMaybe "no number in props!" $ fmap fromJSString nameRef
-      return $ div_ noProps $ map str_ ["Current count: ", name, "!"]
+      return $ div_ noProps $ ["Current count: ", str_ name, "!"]
 
 page hello ps = div_ ps
   [ elem_ $ createElement hello ps
