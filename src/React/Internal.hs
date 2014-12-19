@@ -15,7 +15,7 @@ mkNodeRef (ElemNode (Element ref)) = castRef ref
 mkNodeRef (TextNode t) = castRef $ toJSString t
 
 class ToReactElement e f | e -> f where
-  createElement :: e -> f -- Maybe Props -> [ReactNode] -> ReactElement
+  createElement :: e -> f
 
 instance ToReactElement ReactElement ReactElement where
   createElement = id
