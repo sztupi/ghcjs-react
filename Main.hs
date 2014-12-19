@@ -17,7 +17,7 @@ import GHCJS.DOM.NodeList
 import GHCJS.DOM.Types hiding (Text)
 import Pipes.Safe
 import React
-import React.Attributes
+import React.Props
 import React.DOM
 
 getBody :: IO (Maybe DOMElement)

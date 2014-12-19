@@ -24,13 +24,21 @@ data ReactNode = TextNode !Text
 
 instance IsString ReactNode where
   fromString = TextNode . fromString
+
 type DOMElement = DOM.Element
+type DOMEventTarget = DOM.EventTarget
+type DOMEvent = DOM.Event
+type DOMTouchList = JSRef ()
+type DOMAbstractView = JSRef ()
+type DOMDataTransfer = JSRef ()
+
 type ComponentContext = JSObject ()
 type ReactT = S.SafeT
 type ComponentT m = ReaderT ComponentContext m
 type ComponentM = Reader ComponentContext
 type Prop' a = Lens' (HashMap Text JSString) a
 type Prop a = Prop' (Maybe a)
+type HandlerProp a = Prop (JSFun (a -> IO ()))
 
 type Props = HashMap Text JSString
 type State = HashMap Text JSString
