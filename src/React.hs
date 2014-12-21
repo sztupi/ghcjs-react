@@ -17,6 +17,7 @@ module React (
   str_,
   props,
   noProps,
+  componentContext,
   currentState,
   setState,
   replaceState,
@@ -26,10 +27,13 @@ module React (
   forceUpdate,
   getDOMNode,
   isMounted,
+  eventHandler,
+  unsafeEventHandler,
   module React.Types,
   module React.DOM,
   module React.Props
 ) where
+import Control.Exception
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Reader
@@ -42,6 +46,7 @@ import qualified GHCJS.DOM.Types as DOM
 import GHCJS.Foreign
 import GHCJS.Marshal
 import GHCJS.Types
+import GHCJS.Prim (isUndefined)
 import Control.Lens (Lens', (^.), (^?))
 import qualified Pipes.Safe as S
 import React.Props
@@ -82,6 +87,9 @@ replaceState st = do
 forceUpdate :: MonadIO m => ComponentT m ()
 forceUpdate = ask >>= liftIO . jsForceUpdate
 
+componentContext :: Monad m => ComponentT m (JSObject ())
+componentContext = ask
+
 getDOMNode :: MonadIO m => ComponentT m (Maybe DOMElement)
 getDOMNode = do
   ctxt <- ask
@@ -115,13 +123,37 @@ currentState = do
   ctxt <- ask
   return $ unsafePerformIO $ getProp ("state" :: JSString) ctxt
 
+eventHandler :: FromJSRef a => (a -> ComponentT IO ()) -> ComponentT IO (JSFun (JSRef a -> IO ()))
+eventHandler f = do
+  ctxt <- componentContext
+  inner <- liftIO $ syncCallback1 AlwaysRetain True $ \r -> do
+    mx <- fromJSRef r
+    case mx of
+      Nothing -> throw InvalidEventException
+      Just x -> runReaderT (f x) ctxt
+  st <- currentState
+  rs <- liftIO $ getProp ("h$retained" :: JSString) st
+  liftIO $ pushArray inner rs
+  return inner
+
+unsafeEventHandler :: FromJSRef a => (a -> ComponentT IO ()) -> ComponentT IO (JSFun (JSRef a -> IO ()))
+unsafeEventHandler f = do
+  ctxt <- componentContext
+  inner <- liftIO $ syncCallback1 NeverRetain True $ \r -> do
+    mx <- fromJSRef r
+    case mx of
+      Nothing -> throw InvalidEventException
+      Just x -> runReaderT (f x) ctxt
+  return inner
+
 component :: ComponentT IO ReactElement -> ComponentSpecification IO ps st
 component f = ComponentSpecification f Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
-wrapCallback c = do
+wrapCallback f = do
   cb <- syncCallback2 AlwaysRetain False $ \this x -> do
-    (Element res) <- runReaderT (c ^. render) this
-    setProp ("result" :: JSString) res x
+    res <- runReaderT f this
+    r <- toJSRef res
+    setProp ("result" :: JSString) r x
   w <- reactWrapCallback cb 
   return (w, cb)
 
@@ -153,12 +185,41 @@ createClass' c = do
   o <- liftIO newObj
 
   f <- liftIO $ do
-    (wrapped, inner) <- wrapCallback c
+    (wrapped, inner) <- wrapCallback $ c ^. render
     setProp ("render" :: JSString) wrapped o
     return inner
 
   ifM (componentSpecificationDisplayName c) $ \n ->
     liftIO $ setProp ("displayName" :: JSString) n o
+
+  initialStateFun <- case componentSpecificationGetInitialState c of
+    -- if there's not a default state function, provide a default that
+    -- provides the h$retained array
+    Nothing -> do
+      (wrapped, inner) <- liftIO $ wrapCallback $ liftIO $ do
+        o <- newObj
+        arr <- newArray
+        setProp ("h$retained" :: JSString) arr o
+        return o
+      S.register $ liftIO $ release inner
+      return wrapped
+    -- otherwise, tack h$retained on to the provided state value.
+    Just f -> do
+      (wrapped, inner) <- liftIO $ wrapCallback $ do
+        st <- f
+        arr <- liftIO newArray
+        liftIO $ setProp ("h$retained" :: JSString) arr st
+        return st
+      S.register $ liftIO $ release inner
+      return wrapped
+
+  liftIO $ setProp ("getInitialState" :: JSString) initialStateFun o
+
+  ifM (componentSpecificationGetDefaultProps c) $ \f -> do
+    (wrapped, inner) <- liftIO $ wrapCallback f
+    liftIO $ setProp ("getDefaultProps" :: JSString) wrapped o
+    S.register $ liftIO $ release inner
+    return ()
 
   ifM (componentSpecificationWillMount c) $ \f -> do
     (wrapped, inner) <- liftIO $ do
@@ -213,6 +274,14 @@ createClass' c = do
 
   ifM (componentSpecificationWillUnmount c) $ \f -> do
     (wrapped, inner) <- liftIO $ do
+      let cleanUp = do
+            f
+            s <- currentState
+            liftIO $ do
+              rArray <- getProp ("h$retained" :: JSString) s
+              refs <- popAll rArray
+              mapM_ release refs
+
       cb <- syncCallback1 AlwaysRetain False (runReaderT f)
       w <- provideThis cb
       return (w, cb)
@@ -242,43 +311,6 @@ renderElement e d = liftIO $ jsRender e d
 renderOn :: MonadIO m => DOMElement -> ReactElement -> ReactT m Component
 renderOn = flip renderElement
 
-eventList :: [JSString]
-eventList =
-  [ "onCopy"
-  , "onCut"
-  , "onPaste"
-  , "onKeyDown"
-  , "onKeyPress"
-  , "onKeyUp"
-  , "onFocus"
-  , "onBlur"
-  , "onChange"
-  , "onInput"
-  , "onSubmit"
-  , "onClick"
-  , "onDoubleClick"
-  , "onDrag"
-  , "onDragEnd"
-  , "onDragEnter"
-  , "onDragExit"
-  , "onDragLeave"
-  , "onDragOver"
-  , "onDragStart"
-  , "onDrop"
-  , "onMouseDown"
-  , "onMouseEnter"
-  , "onMouseLeave"
-  , "onMouseMove"
-  , "onMouseOut"
-  , "onMouseOver"
-  , "onMouseUp"
-  , "onTouchCancel"
-  , "onTouchEnd"
-  , "onTouchMove"
-  , "onScroll"
-  , "onWheel"
-  ]
-
 {-
 retainEvents :: Props -> HashMap Text (JSFun ()) -> IO (HashMap Text (JSFun ()))
 retainEvents
@@ -290,3 +322,13 @@ maybeReleaseEvents newProps registered = forM_ eventList $ \eventName -> do
   case current of
     Nothing -> 
 -}
+
+popAll :: JSArray a -> IO [JSRef a]
+popAll ref = go []
+  where
+    go xs = do
+      x <- popArray ref
+      if isUndefined x
+        then return xs
+        else go (x : xs)
+

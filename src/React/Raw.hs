@@ -46,3 +46,8 @@ foreign import javascript unsafe "($1).setState($2)"
 foreign import javascript unsafe "($1).replaceState($2)"
   jsReplaceState :: JSRef a -> JSRef b -> IO () 
 
+foreign import javascript unsafe "$1.pop()"
+  popArray :: JSArray a -> IO (JSRef a)
+
+foreign import javascript unsafe "console.log($1)"
+  debugger :: JSRef a -> IO ()

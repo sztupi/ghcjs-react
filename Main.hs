@@ -10,6 +10,7 @@ import Data.Maybe
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import GHCJS.Foreign
+import GHCJS.Marshal
 import GHCJS.Types
 import GHCJS.DOM
 import GHCJS.DOM.Document
@@ -19,6 +20,7 @@ import Pipes.Safe
 import React
 import React.Props
 import React.DOM
+import React.Raw (debugger)
 
 getBody :: IO (Maybe DOMElement)
 getBody = currentDocument ^!? acts._Just.act documentGetBody._Just.to castToElement
@@ -36,9 +38,14 @@ helloComponent = component render
   where
     render = do
       ps <- currentProps
+      ctxt <- componentContext
+      h <- eventHandler $ \event -> do
+        liftIO $ print $ mouseEventButton event
+
       nameRef <- liftIO $ getPropMaybe ("number" :: Text) ps
       let name = fromMaybe "no number in props!" $ fmap fromJSString nameRef
-      return $ div_ noProps $ ["Current count: ", str_ name, "!"]
+      return $ div_ (props (onClick ?~ h))
+        [ "Current count: ", str_ name, "!"]
 
 page hello ps = div_ ps
   [ elem_ $ createElement hello ps
@@ -49,8 +56,8 @@ main = do
   (Just e) <- getBody
   (flip runStateT) (0 :: Int) $ runReact $ do
     hello <- createClass helloComponent
-    forever $ do
-      counter <- lift get
-      renderOn e $ page hello (props (prop "number" ?~ (toJSString $ show counter)))
-      lift $ put (counter + 1)
-      liftIO $ threadDelay 1000000
+    -- forever $ do
+    counter <- lift get
+    renderOn e $ page hello (props (prop "number" ?~ (toJSString $ show counter)))
+    lift $ put (counter + 1)
+    -- liftIO $ threadDelay 1000000

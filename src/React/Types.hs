@@ -4,7 +4,9 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 module React.Types where
+import Control.Exception
 import Control.Lens
 import Control.Lens.TH
 import Control.Monad.Trans.Reader
@@ -12,12 +14,17 @@ import Data.HashMap.Strict (HashMap)
 import Data.String
 import Data.Text (Text)
 import Data.Time
+import Data.Typeable
 import qualified GHCJS.DOM as DOM
 import qualified GHCJS.DOM.Types as DOM
+import GHCJS.Marshal
 import GHCJS.Types
 import qualified Pipes.Safe as S
 
-newtype ReactElement = Element (JSObject ())
+newtype ReactElement = Element (JSRef ReactElement)
+
+instance ToJSRef ReactElement where
+  toJSRef (Element r) = return r
 
 data ReactNode = TextNode !Text
                | ElemNode !ReactElement
@@ -33,12 +40,13 @@ type DOMAbstractView = JSRef ()
 type DOMDataTransfer = JSRef ()
 
 type ComponentContext = JSObject ()
+
 type ReactT = S.SafeT
 type ComponentT m = ReaderT ComponentContext m
 type ComponentM = Reader ComponentContext
 type Prop' a = Lens' (HashMap Text JSString) a
 type Prop a = Prop' (Maybe a)
-type HandlerProp a = Prop (JSFun (a -> IO ()))
+type HandlerProp a = Prop (JSFun (JSRef a -> IO ()))
 
 type Props = HashMap Text JSString
 type State = HashMap Text JSString
@@ -160,7 +168,7 @@ data MouseEvent = MouseEvent
   , mouseEventType_            :: Text
   , mouseEventAltKey           :: Bool
   , mouseEventButton           :: Int
-  , mouseEventButtons          :: Int
+  , mouseEventButtons          :: Maybe Int
   , mouseEventClientX          :: Double
   , mouseEventClientY          :: Double
   , mouseEventCtrlKey          :: Bool
@@ -237,4 +245,9 @@ data WheelEvent = WheelEvent
   }
 
 makeFields ''WheelEvent
+
+data InvalidEventException = InvalidEventException
+  deriving (Show, Typeable)
+
+instance Exception InvalidEventException
 

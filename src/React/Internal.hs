@@ -44,13 +44,28 @@ castChildren = unsafePerformIO . toArray . fmap mkNodeRef
 objProp :: FromJSRef a => JSString -> JSRef o -> MaybeT IO a
 objProp p o = do
   ref <- liftIO $ getProp p o
-  MaybeT $ fromJSRef ref
+  res <- liftIO $ fromJSRef ref
+  case res of
+    Nothing -> do
+      liftIO $ debugger p
+      liftIO $ debugger ref
+      MaybeT $ return Nothing
+    Just v -> return v
 
 instance FromJSRef Event where
   fromJSRef = return . Just . Event
 
 instance FromJSRef EventTarget where
   fromJSRef = return . Just . EventTarget
+
+instance FromJSRef a => FromJSRef (Maybe a) where
+  fromJSRef r = if isNull r || isUndefined r
+    then return $ Just Nothing
+    else do
+      res <- fromJSRef (castRef r :: JSRef a)
+      case res of
+        Nothing -> return Nothing
+        Just r -> return $ Just r
 
 commonEventData o e = e
   <$> objProp "bubbles" o
@@ -66,6 +81,7 @@ commonEventData o e = e
   <*> objProp "type" o
 
 clipboardEventData o = commonEventData o ClipboardEvent <*> objProp "clipboardData" o
+
 
 keyboardEventData o = commonEventData o KeyboardEvent
   <*> objProp "altKey" o
@@ -100,6 +116,9 @@ mouseEventData o = commonEventData o MouseEvent
   <*> objProp "screenX" o
   <*> objProp "screenY" o
   <*> objProp "shiftKey" o
+
+instance FromJSRef MouseEvent where
+  fromJSRef = runMaybeT . mouseEventData
 
 touchEventData o = commonEventData o TouchEvent
   <*> objProp "altKey" o
