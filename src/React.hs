@@ -123,6 +123,7 @@ currentState = do
   ctxt <- ask
   return $ unsafePerformIO $ getProp ("state" :: JSString) ctxt
 
+-- | Create an event handler that can be attached to props. Callbacks marshalled via this function are managed by the component that they are created in. The callbacks will be relased in any of the following phases: componentWillUnmount, componentDidUpdate. Note: callbacks are managed in the component state using the @h$retained@ key, so be sure to not overrwrite this key on accident!
 eventHandler :: FromJSRef a => (a -> ComponentT IO ()) -> ComponentT IO (JSFun (JSRef a -> IO ()))
 eventHandler f = do
   ctxt <- componentContext
@@ -173,6 +174,15 @@ wrapShouldUpdate retainStrat runAsync f = do
     f this result (castRef x) (castRef y)
   wrapped <- provideThisArbWithResult inner
   return (wrapped, inner)
+
+
+cleanUp f = do
+  f
+  s <- currentState
+  liftIO $ do
+    rArray <- getProp ("h$retained" :: JSString) s
+    refs <- popAll rArray
+    mapM_ release refs
 
 -- createClass :: (S.MonadMask m, MonadIO m) => ComponentSpecification m ps st
                                           -- -> ReactT m (ComponentFactory m st)
@@ -260,7 +270,7 @@ createClass' c = do
 
   ifM (componentSpecificationWillUpdate c) $ \f -> do
     (wrapped, inner) <- liftIO $ do
-      syncCallback3 AlwaysRetain False (\this x y -> runReaderT (f x y) this)
+      syncCallback3 AlwaysRetain False (\this x y -> runReaderT (cleanUp $ f x y) this)
     liftIO $ setProp ("componentWillUpdate" :: JSString) wrapped o
     S.register $ liftIO $ release inner
     return ()
@@ -274,15 +284,7 @@ createClass' c = do
 
   ifM (componentSpecificationWillUnmount c) $ \f -> do
     (wrapped, inner) <- liftIO $ do
-      let cleanUp = do
-            f
-            s <- currentState
-            liftIO $ do
-              rArray <- getProp ("h$retained" :: JSString) s
-              refs <- popAll rArray
-              mapM_ release refs
-
-      cb <- syncCallback1 AlwaysRetain False (runReaderT f)
+      cb <- syncCallback1 AlwaysRetain False (runReaderT $ cleanUp f)
       w <- provideThis cb
       return (w, cb)
     liftIO $ setProp ("componentWillUnmount" :: JSString) wrapped o
