@@ -51,3 +51,6 @@ foreign import javascript unsafe "$1.pop()"
 
 foreign import javascript unsafe "console.log($1)"
   debugger :: JSRef a -> IO ()
+
+foreign import javascript unsafe "Object.keys($1)"
+  objectKeys :: JSObject a -> IO (JSArray JSString)

@@ -18,7 +18,7 @@ cabal-version:       >=1.10
 executable             react-test
   main-is:             Main.hs
   -- ghcjs-options:       -O2
-  build-depends:       base, ghcjs-base, ghcjs-dom, hs-reactjs, text, lens, transformers, lens-aeson, mtl, pipes-safe, ghcjs-prim
+  build-depends:       base, ghcjs-base, ghcjs-dom, hs-reactjs, text, lens, transformers, lens-aeson, mtl, pipes-safe, ghcjs-prim, unordered-containers
   default-language:    Haskell2010
 
 library

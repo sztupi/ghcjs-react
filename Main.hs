@@ -1,13 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 import Control.Concurrent
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.State.Strict
 import Control.Lens hiding (createClass)
+import qualified Data.HashMap.Strict as H
 import Data.Maybe
-import Data.Text (Text)
+import Data.Text (Text, pack)
 import GHC.Generics (Generic)
 import GHCJS.Foreign
 import GHCJS.Marshal
@@ -38,14 +40,45 @@ helloComponent = component render
   where
     render = do
       ps <- currentProps
-      ctxt <- componentContext
       h <- eventHandler $ \event -> do
         liftIO $ print $ mouseEventButton event
-
-      nameRef <- liftIO $ getPropMaybe ("number" :: Text) ps
-      let name = fromMaybe "no number in props!" $ fmap fromJSString nameRef
+      n <- liftIO $ ps ^!? at "number" . _Just . to fromJSString
+      let name = fromMaybe "no number in props!" n
       return $ div_ (props (onClick ?~ h))
         [ "Current count: ", str_ name, "!"]
+
+defaultProps :: MonadIO m => ComponentT m (JSRef ())
+defaultProps = liftIO $ do
+  o <- newObj
+  count <- toJSRef (0 :: Int)
+  setProp ("clicks" :: JSString) count o
+  return o
+
+clickyCounterComponent :: ComponentSpecification IO () ()
+clickyCounterComponent = component render
+  & displayName ?~ "Clicky"
+  & getDefaultProps ?~ defaultProps
+  where
+    render = do
+      clickHandler <- unsafeEventHandler $ \_ -> do
+        ps <- currentProps
+        (counter :: Maybe Int) <- ps ^! readRef "clicks" 
+        case counter of
+          Nothing -> do
+            r <- liftIO $ toJSRef (0 :: Int)
+            setProps (H.singleton "clicks" $ castRef r)
+          Just x -> do
+            r <- liftIO $ toJSRef (x + 1)
+            setProps (H.singleton "clicks" $ castRef r)
+      ps <- currentProps
+      r <- ps ^! readRef "clicks"
+      let str = str_ $ case r of
+            Nothing -> "No number :("
+            Just x -> pack $ show (x :: Int)
+      return $ div_ noProps
+        [ elem_ $ button_ (props (onClick ?~ clickHandler)) [str_ "Click me!"]
+        , elem_ $ div_ noProps ["Count: ", str]
+        ]
 
 page hello ps = div_ ps
   [ elem_ $ createElement hello ps
@@ -54,10 +87,7 @@ page hello ps = div_ ps
 
 main = do
   (Just e) <- getBody
-  (flip runStateT) (0 :: Int) $ runReact $ do
-    hello <- createClass helloComponent
-    -- forever $ do
-    counter <- lift get
-    renderOn e $ page hello (props (prop "number" ?~ (toJSString $ show counter)))
-    lift $ put (counter + 1)
-    -- liftIO $ threadDelay 1000000
+  runReact $ do
+    clicky <- createClass clickyCounterComponent
+    let n = createElement clicky noProps
+    renderOn e n

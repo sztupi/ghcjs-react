@@ -29,6 +29,8 @@ module React (
   isMounted,
   eventHandler,
   unsafeEventHandler,
+  cast,
+  readRef,
   module React.Types,
   module React.DOM,
   module React.Props
@@ -41,13 +43,14 @@ import Control.Monad.Trans.Writer.Strict
 import Data.Aeson
 import Data.Monoid
 import Data.Text (Text)
+import qualified Data.HashMap.Strict as H
 import qualified GHCJS.DOM as DOM
 import qualified GHCJS.DOM.Types as DOM
 import GHCJS.Foreign
 import GHCJS.Marshal
 import GHCJS.Types
 import GHCJS.Prim (isUndefined)
-import Control.Lens (Lens', (^.), (^?))
+import Control.Lens (Lens', (^.), (^?), lens, act, _Just, Action, at)
 import qualified Pipes.Safe as S
 import React.Props
 import React.DOM
@@ -113,10 +116,11 @@ replaceProps ps = do
   ctxt <- ask
   liftIO $ jsReplaceProps ctxt (makeProps ps)
 
-currentProps :: Monad m => ComponentT m (JSRef a)
+currentProps :: MonadIO m => ComponentT m Props
 currentProps = do
   ctxt <- ask
-  return $ unsafePerformIO $ getProp ("props" :: JSString) ctxt
+  ps <- liftIO $ getProp ("props" :: JSString) ctxt
+  liftIO $ readProps ps
 
 currentState :: Monad m => ComponentT m (JSRef a)
 currentState = do
@@ -313,6 +317,9 @@ renderElement e d = liftIO $ jsRender e d
 renderOn :: MonadIO m => DOMElement -> ReactElement -> ReactT m Component
 renderOn = flip renderElement
 
+cast :: Lens' (JSRef a) (JSRef b)
+cast = lens castRef (const castRef)
+
 {-
 retainEvents :: Props -> HashMap Text (JSFun ()) -> IO (HashMap Text (JSFun ()))
 retainEvents
@@ -325,12 +332,9 @@ maybeReleaseEvents newProps registered = forM_ eventList $ \eventName -> do
     Nothing -> 
 -}
 
-popAll :: JSArray a -> IO [JSRef a]
-popAll ref = go []
-  where
-    go xs = do
-      x <- popArray ref
-      if isUndefined x
-        then return xs
-        else go (x : xs)
+readRef :: (MonadIO m, FromJSRef a) => Text -> Action m Props (Maybe a)
+readRef r = act $ \ps -> case H.lookup r ps of
+  Nothing -> return Nothing
+  Just ref -> liftIO $ fromJSRef $ castRef ref
+
 

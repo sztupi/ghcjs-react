@@ -4,9 +4,10 @@
 {-# LANGUAGE OverloadedStrings      #-}
 module React.Internal where
 import Control.Applicative
+import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.Maybe
-import Data.HashMap.Strict (HashMap, toList)
+import Data.HashMap.Strict (HashMap, toList, fromList)
 import Data.Text (Text)
 import GHCJS.DOM.Types (Event(..), EventTarget(..))
 import GHCJS.Foreign
@@ -26,11 +27,29 @@ class ToReactElement e f | e -> f where
 instance ToReactElement ReactElement ReactElement where
   createElement = id
 
+popAll :: JSArray a -> IO [JSRef a]
+popAll ref = go []
+  where
+    go xs = do
+      x <- popArray ref
+      if isUndefined x
+        then return xs
+        else go (x : xs)
+
 makeProps :: Props -> JSRef a
 makeProps ps = unsafePerformIO $ do
   o <- newObj
   mapM_ (\(k, v) -> setProp k v o) (toList ps)
   return o
+
+readProps :: JSObject a -> IO Props
+readProps o = do
+  karray <- objectKeys o
+  ks <- popAll karray
+  kvs <- forM (fmap castRef ks) $ \k -> do
+    v <- getProp k o
+    return $! (fromJSString k, v)
+  return $! fromList kvs
 
 instance ToReactElement Text (Maybe Props -> [ReactNode] -> ReactElement) where
   createElement e ps es = jsCreateElement (toJSString e) (maybe jsNull makeProps ps) (castChildren es)
