@@ -50,7 +50,8 @@ import GHCJS.Foreign
 import GHCJS.Marshal
 import GHCJS.Types
 import GHCJS.Prim (isUndefined)
-import Control.Lens (Lens', (^.), (^?), lens, act, _Just, Action, at)
+import Control.Lens (Lens', (^.), (^?), lens, _Just, at)
+import Control.Lens.Action (act, Action)
 import qualified Pipes.Safe as S
 import React.Props
 import React.DOM

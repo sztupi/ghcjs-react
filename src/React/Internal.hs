@@ -71,12 +71,6 @@ objProp p o = do
       MaybeT $ return Nothing
     Just v -> return v
 
-instance FromJSRef Event where
-  fromJSRef = return . Just . Event
-
-instance FromJSRef EventTarget where
-  fromJSRef = return . Just . EventTarget
-
 instance FromJSRef a => FromJSRef (Maybe a) where
   fromJSRef r = if isNull r || isUndefined r
     then return $ Just Nothing
