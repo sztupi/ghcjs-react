@@ -247,7 +247,7 @@ createClass' c = do
 
   ifM (componentSpecificationDidMount c) $ \f -> do
     (wrapped, inner) <- liftIO $ do
-      cb <- syncCallback1 AlwaysRetain False (runReaderT f)
+      cb <- syncCallback1 AlwaysRetain True (runReaderT f)
       w <- provideThis cb
       return (w, cb)
     liftIO $ setProp ("componentDidMount" :: JSString) wrapped o
