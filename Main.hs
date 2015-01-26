@@ -7,6 +7,7 @@ import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Trans.State.Strict
 import Control.Lens hiding (createClass)
+import Control.Lens.Action
 import qualified Data.HashMap.Strict as H
 import Data.Maybe
 import Data.Text (Text, pack)
@@ -62,7 +63,7 @@ clickyCounterComponent = component render
     render = do
       clickHandler <- unsafeEventHandler $ \_ -> do
         ps <- currentProps
-        (counter :: Maybe Int) <- ps ^! readRef "clicks" 
+        (counter :: Maybe Int) <- ps ^! readRef "clicks"
         case counter of
           Nothing -> do
             r <- liftIO $ toJSRef (0 :: Int)
