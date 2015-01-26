@@ -4,6 +4,7 @@ module React.Props where
 import Control.Lens
 import Control.Monad
 import Data.Text (Text, singleton)
+import qualified Data.Text.Read as TR
 import Data.HashMap.Strict (HashMap)
 import GHCJS.Foreign
 import GHCJS.Types
@@ -22,6 +23,16 @@ present = lens getter setter
 jsString :: (ToJSString a, FromJSString a) => Iso' a JSString
 jsString = iso toJSString fromJSString
 
+decimal :: Lens' (Maybe JSString) (Maybe Integer)
+decimal = lens getter setter
+  where
+    getter Nothing  = Nothing
+    getter (Just s) = case TR.decimal (fromJSString s) of
+                        Left err -> Nothing
+                        Right (n,_) -> Just n
+
+    setter _ Nothing  = Nothing
+    setter _ (Just n) = Just $ toJSString $ show n
 {-
 data AcceptAttribute = Extension
                      | Mime
@@ -130,7 +141,10 @@ formNoValidate :: Prop Bool
 -- "1" | "0"
 frameBorder :: Prop Bool
 
-height :: Prop Int
+-}
+height :: Prop Integer
+height = at "height" . decimal
+{-
 
 hidden :: Prop Bool
 
@@ -196,7 +210,7 @@ pattern :: Prop Text
 placeholder :: Prop Text
 
 -- TODO URI
-poster :: Prop Text 
+poster :: Prop Text
 
 data Preload = PreloadNone | PreloadMetadata | PreloadAuto
 
@@ -266,9 +280,12 @@ type_ :: Prop Text
 useMap :: Prop Text
 
 value :: Prop Text
+-}
 
-width :: Prop Int
+width :: Prop Integer
+width = at "width" . decimal
 
+{-
 data WMode = Transparent | Opaque
 
 wmode :: Prop WMode
@@ -298,7 +315,10 @@ cy
 d
 dx
 dy
-fill
+-}
+fill :: Prop JSString
+fill = at "fill"
+{-
 fillOpacity
 fontFamily
 fontSize
@@ -332,10 +352,16 @@ version
 viewBox
 x1
 x2
-x
+-}
+x :: Prop' (Maybe Integer)
+x = prop "x" . decimal
+{-
 y1
 y2
-y
+-}
+y :: Prop' (Maybe Integer)
+y = prop "y" . decimal
+{-
 aria
 -}
 
@@ -347,7 +373,7 @@ prop :: Text -> Prop (JSRef a)
 prop t = at t . casted
 
 -- TODO Clean up all retained JSFuns in componentWillUnmount? Other places?
-onCopy :: HandlerProp ClipboardEvent 
+onCopy :: HandlerProp ClipboardEvent
 onCopy = prop "onCopy" . casted
 
 onCut :: HandlerProp ClipboardEvent
@@ -448,4 +474,3 @@ onScroll = prop "onScroll" . casted
 
 onWheel :: HandlerProp WheelEvent
 onWheel = prop "onWheel" . casted
-
