@@ -36,6 +36,12 @@ popAll ref = go []
         then return xs
         else go (x : xs)
 
+makeState :: State -> JSRef a
+makeState ps = unsafePerformIO $ do
+  o <- newObj
+  mapM_ (\(k, v) -> setProp k v o) (toList ps)
+  return o
+
 makeProps :: Props -> JSRef a
 makeProps ps = unsafePerformIO $ do
   o <- newObj
@@ -152,4 +158,3 @@ wheelEventData o = commonEventData o WheelEvent
   <*> objProp "deltaX" o
   <*> objProp "deltaY" o
   <*> objProp "deltaZ" o
-

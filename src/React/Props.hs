@@ -3,7 +3,8 @@
 module React.Props where
 import Control.Lens
 import Control.Monad
-import Data.Text (Text, singleton)
+import Prelude hiding (words, unwords)
+import Data.Text (Text, singleton, words, unwords)
 import qualified Data.Text.Read as TR
 import Data.HashMap.Strict (HashMap)
 import GHCJS.Foreign
@@ -33,6 +34,16 @@ decimal = lens getter setter
 
     setter _ Nothing  = Nothing
     setter _ (Just n) = Just $ toJSString $ show n
+
+spaceSeparated :: Lens' (Maybe JSString) [Text]
+spaceSeparated = lens getter setter
+  where
+    getter Nothing      = []
+    getter (Just s)     = words $ fromJSString s
+
+    setter _ []         = Nothing
+    setter _ xs@(_:_)   = Just $ toJSString $ unwords xs
+
 {-
 data AcceptAttribute = Extension
                      | Mime
@@ -88,8 +99,8 @@ checked :: Prop Bool
 classID :: Prop JSString
 -}
 
-className :: Prop JSString
-className = at "className"
+className :: Prop' [Text]
+className = at "className" . spaceSeparated
 
 {-
 cols :: Prop Int
@@ -353,13 +364,13 @@ viewBox
 x1
 x2
 -}
-x :: Prop' (Maybe Integer)
+x :: Prop Integer
 x = prop "x" . decimal
 {-
 y1
 y2
 -}
-y :: Prop' (Maybe Integer)
+y :: Prop Integer
 y = prop "y" . decimal
 {-
 aria

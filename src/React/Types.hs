@@ -49,7 +49,7 @@ type Prop a = Prop' (Maybe a)
 type HandlerProp a = Prop (JSFun (JSRef a -> IO ()))
 
 type Props = HashMap Text JSString
-type State = HashMap Text JSString
+type State = HashMap Text (JSRef ())
 
 type Element = Maybe Props -> [ReactNode] -> ReactElement
 
@@ -61,7 +61,7 @@ data ComponentSpecification m ps st = ComponentSpecification
   , componentSpecificationDisplayName      :: Maybe JSString
   , componentSpecificationGetInitialState  :: Maybe (ComponentT m (JSRef st))
   , componentSpecificationGetDefaultProps  :: Maybe (ComponentT m (JSRef ps))
-  -- , componentGetPropTypes 
+  -- , componentGetPropTypes
   -- , componentMixins
   -- , componentStatics
   , componentSpecificationWillMount        :: Maybe (ComponentT m ())
@@ -176,7 +176,7 @@ data MouseEvent = MouseEvent
   , mouseEventMetaKey          :: Bool
   , mouseEventPageX            :: Double
   , mouseEventPageY            :: Double
-  , mouseEventRelatedTarget    :: DOMEventTarget
+  , mouseEventRelatedTarget    :: Maybe DOMEventTarget
   , mouseEventScreenX          :: Double
   , mouseEventScreenY          :: Double
   , mouseEventShiftKey         :: Bool
@@ -250,4 +250,3 @@ data InvalidEventException = InvalidEventException
   deriving (Show, Typeable)
 
 instance Exception InvalidEventException
-

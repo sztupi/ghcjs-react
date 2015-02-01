@@ -81,12 +81,12 @@ ifM (Just x) f = f x
 setState :: MonadIO m => State -> ComponentT m ()
 setState st = do
   ctxt <- ask
-  liftIO $ jsSetState ctxt (makeProps st)
+  liftIO $ jsSetState ctxt (makeState st)
 
 replaceState :: MonadIO m => State -> ComponentT m ()
 replaceState st = do
   ctxt <- ask
-  liftIO $ jsReplaceState ctxt (makeProps st)
+  liftIO $ jsReplaceState ctxt (makeState st)
 
 forceUpdate :: MonadIO m => ComponentT m ()
 forceUpdate = ask >>= liftIO . jsForceUpdate
@@ -156,11 +156,11 @@ component :: ComponentT IO ReactElement -> ComponentSpecification IO ps st
 component f = ComponentSpecification f Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 wrapCallback f = do
-  cb <- syncCallback2 AlwaysRetain False $ \this x -> do
+  cb <- syncCallback2 AlwaysRetain True $ \this x -> do
     res <- runReaderT f this
     r <- toJSRef res
     setProp ("result" :: JSString) r x
-  w <- reactWrapCallback cb 
+  w <- reactWrapCallback cb
   return (w, cb)
 
 syncCallback3 retainStrat runAsync f = do
@@ -330,12 +330,10 @@ maybeReleaseEvents newProps registered = forM_ eventList $ \eventName -> do
   prop <- getProp eventName newProps
   current = lookup eventName registered
   case current of
-    Nothing -> 
+    Nothing ->
 -}
 
 readRef :: (MonadIO m, FromJSRef a) => Text -> Action m Props (Maybe a)
 readRef r = act $ \ps -> case H.lookup r ps of
   Nothing -> return Nothing
   Just ref -> liftIO $ fromJSRef $ castRef ref
-
-
