@@ -1,12 +1,15 @@
 {-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase        #-}
 module React.Props where
 import Control.Lens
 import Control.Monad
+import Data.Monoid
 import Prelude hiding (words, unwords)
-import Data.Text (Text, singleton, words, unwords)
+import Data.Text (Text, singleton, words, unwords, split, intercalate)
 import qualified Data.Text.Read as TR
 import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as H
 import GHCJS.Foreign
 import GHCJS.Types
 import React.Types (Prop', Prop, HandlerProp, ClipboardEvent, KeyboardEvent,
@@ -44,6 +47,20 @@ spaceSeparated = lens getter setter
     setter _ []         = Nothing
     setter _ xs@(_:_)   = Just $ toJSString $ unwords xs
 
+styleMap :: Lens' (Maybe JSString) (HashMap Text Text)
+styleMap = lens getter setter
+  where
+    getter Nothing      = H.empty
+    getter (Just s)     = H.fromList $
+                            map (\case (a:b:_) -> (a,b)) $
+                            map (split (==':')) $
+                            split (==';') $ fromJSString s
+
+    setter :: Maybe JSString -> HashMap Text Text -> Maybe JSString
+    setter _ h          = Just $ toJSString $
+                            intercalate ";" $
+                            map (\case (a,b) -> (a <> ":" <> b)) $
+                            H.toList h
 {-
 data AcceptAttribute = Extension
                      | Mime
@@ -276,8 +293,11 @@ src :: Prop Text
 srcDoc :: Prop Text
 srcSet :: Prop Text
 start :: Prop Int
-step :: Prop Int
-style :: Prop (HashMap Text Text)
+step :: Prop Int -}
+
+style :: Prop' (HashMap Text Text)
+style = at "style" . styleMap
+{-
 tabIndex :: Prop Int
 
 data Target = Self | Blank | Parent | Top
@@ -322,9 +342,10 @@ dangerouslySetInnerHTML = at "dangerouslySetInnerHTML"
 
 {-
 cx
-cy
-d
-dx
+cy-}
+d :: Prop JSString
+d = at "d"
+{-dx
 dy
 -}
 fill :: Prop JSString
@@ -347,8 +368,13 @@ patternUnits
 points
 preserveAspectRatio
 r
-rx
-ry
+-}
+rx :: Prop Integer
+rx = prop "rx" . decimal
+
+ry :: Prop Integer
+ry = prop "ry" . decimal
+{-
 spreadMethod
 stopColor
 stopOpacity
