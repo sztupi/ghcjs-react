@@ -384,20 +384,22 @@ strokeLinecap
 strokeOpacity
 strokeWidth
 textAnchor
-transform
+-}
+transform :: Prop JSString
+transform = at "transform"
+{-
 version
 viewBox
-x1
-x2
 -}
-x :: Prop Integer
-x = prop "x" . decimal
-{-
-y1
-y2
--}
-y :: Prop Integer
-y = prop "y" . decimal
+x, x1, x2 :: Prop Integer
+x  = prop "x"  . decimal
+x1 = prop "x1" . decimal
+x2 = prop "x2" . decimal
+
+y, y1, y2 :: Prop Integer
+y  = prop "y"  . decimal
+y1 = prop "y1" . decimal
+y2 = prop "y2" . decimal
 {-
 aria
 -}
