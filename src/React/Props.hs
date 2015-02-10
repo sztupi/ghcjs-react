@@ -340,9 +340,10 @@ itemType :: Prop Text
 dangerouslySetInnerHTML :: Prop JSString
 dangerouslySetInnerHTML = at "dangerouslySetInnerHTML"
 
-{-
-cx
-cy-}
+cx,cy :: Prop Integer
+cx = prop "cx" . decimal
+cy = prop "cy" . decimal
+
 d :: Prop JSString
 d = at "d"
 {-dx
@@ -365,10 +366,15 @@ offset
 opacity
 patternContentUnits
 patternUnits
-points
-preserveAspectRatio
-r
 -}
+points :: Prop JSString
+points = at "points"
+{-
+preserveAspectRatio
+-}
+r :: Prop Integer
+r = prop "r" . decimal
+
 rx :: Prop Integer
 rx = prop "rx" . decimal
 

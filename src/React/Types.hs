@@ -20,8 +20,11 @@ import qualified GHCJS.DOM.Types as DOM
 import GHCJS.Marshal
 import GHCJS.Types
 import qualified Pipes.Safe as S
+import Control.DeepSeq (NFData)
 
 newtype ReactElement = Element (JSRef ReactElement)
+
+instance NFData ReactElement
 
 instance ToJSRef ReactElement where
   toJSRef (Element r) = return r
